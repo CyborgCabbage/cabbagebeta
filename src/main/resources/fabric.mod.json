@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "cabbagebeta",
+  "version": "${version}",
+
+  "name": "Cabbage's Beta Terrain Generator",
+  "description": "Adds a world present for beta terrain!",
+  "authors": [
+    "CyborgCabbage"
+  ],
+
+  "license": "GPL-v3",
+  "icon": "assets/cabbagebeta/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "cyborgcabbage.cabbagebeta.CabbageBeta"
+    ],
+    "client": [
+    ]
+  },
+  "mixins": [
+    "cabbagebeta.mixins.json"
+  ],
+  "accessWidener": "cabbagebeta.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "fabric": "*",
+    "minecraft": " >=1.19 <1.19.3",
+    "java": ">=17"
+  }
+}

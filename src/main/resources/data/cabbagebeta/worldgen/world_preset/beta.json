@@ -1,0 +1,27 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "type": "cabbagebeta:beta_overworld",
+      "generator": {
+        "type": "cabbagebeta:beta"
+      }
+    },
+    "minecraft:the_end": {
+      "type": "minecraft:the_end",
+      "generator": {
+        "type": "minecraft:noise",
+        "biome_source": {
+          "type": "minecraft:the_end"
+        },
+        "settings": "minecraft:end"
+      }
+    },
+    "minecraft:the_nether": {
+      "type": "cabbagebeta:beta_nether",
+      "generator": {
+        "type": "cabbagebeta:beta",
+        "mode": "nether"
+      }
+    }
+  }
+}
