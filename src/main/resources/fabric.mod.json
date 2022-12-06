@@ -9,7 +9,7 @@
     "CyborgCabbage"
   ],
 
-  "license": "GPL-v3",
+  "license": "LGPL-3.0",
   "icon": "assets/cabbagebeta/icon.png",
 
   "environment": "*",
