@@ -187,8 +187,7 @@ public class ChunkProviderHell extends BetaChunkProvider {
     }
 
     @Override
-    public void fillChunk(Chunk chunk, long seed) {
-        this.worldSeed = seed;
+    public void fillChunk(Chunk chunk) {
         var pos = chunk.getPos();
         this.rand.setSeed((long)pos.x * 341873128712L + (long)pos.z * 132897987541L);
         this.generateTerrain(chunk);
@@ -305,7 +304,7 @@ public class ChunkProviderHell extends BetaChunkProvider {
     }
 
     @Override
-    public void populate(StructureWorldAccess world, Chunk chunk, long seed) {
+    public void populate(StructureWorldAccess world, Chunk chunk) {
         int i2 = chunk.getPos().x;
         int i3 = chunk.getPos().z;
         int i4 = i2 * 16;

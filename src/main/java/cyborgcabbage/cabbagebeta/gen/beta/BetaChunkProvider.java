@@ -13,8 +13,8 @@ public abstract class BetaChunkProvider {
         rand = new Random(seed);
         worldSeed = seed;
     }
-    public abstract void fillChunk(Chunk chunk, long seed);
-    public abstract void populate(StructureWorldAccess world, Chunk chunk, long seed);
+    public abstract void fillChunk(Chunk chunk);
+    public abstract void populate(StructureWorldAccess world, Chunk chunk);
     public abstract BiomeGenBase getBiome(int x, int z);
     public boolean isInitialised(){
         return rand != null;

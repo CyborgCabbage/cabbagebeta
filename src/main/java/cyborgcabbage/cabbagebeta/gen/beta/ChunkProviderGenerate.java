@@ -229,8 +229,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     }
 
     @Override
-    public void fillChunk(Chunk chunk, long seed) {
-        init(seed);
+    public void fillChunk(Chunk chunk) {
         var pos = chunk.getPos();
         this.rand.setSeed((long) pos.x * 341873128712L + (long) pos.z * 132897987541L);
         this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
@@ -351,8 +350,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         return noiseArray;
     }
     @Override
-    public void populate(StructureWorldAccess world, Chunk chunk, long seed) {
-        init(seed);
+    public void populate(StructureWorldAccess world, Chunk chunk) {
         //BlockSand.fallInstantly = true;
         int i2 = chunk.getPos().x;
         int i3 = chunk.getPos().z;
