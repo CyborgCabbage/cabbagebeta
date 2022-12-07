@@ -29,18 +29,18 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-public class BetaChunkGenerator extends ChunkGenerator implements BetaProperties {
+public class BetaChunkGenerator extends ChunkGenerator {
     public static final Codec<BetaChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryOps.createRegistryCodec(Registry.STRUCTURE_SET_KEY).forGetter(chunkGenerator -> chunkGenerator.structureSetRegistry),
             RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry),
-            Codec.STRING.fieldOf("dimension_mode").orElse("").forGetter(BetaChunkGenerator::getDimensionMode),
-            Codec.BOOL.fieldOf("use_full_height").orElse(false).forGetter(BetaChunkGenerator::getUseFullHeight),
-            Codec.INT.fieldOf("sea_level").orElse(64).forGetter(BetaChunkGenerator::getSeaLevel),
-            Codec.FLOAT.fieldOf("factor").orElse(12.0f).forGetter(BetaChunkGenerator::getFactor),
-            Codec.INT.fieldOf("ground_level").orElse(68).forGetter(BetaChunkGenerator::getGroundLevel),
-            Codec.INT.fieldOf("cave_lava_level").orElse(10).forGetter(BetaChunkGenerator::getCaveLavaLevel),
-            Codec.FLOAT.fieldOf("mixing").orElse(1.0f).forGetter(BetaChunkGenerator::getMixing),
-            Codec.BOOL.fieldOf("fixes").orElse(false).forGetter(BetaChunkGenerator::getFixes)
+            Codec.STRING.fieldOf("mode").orElse("").forGetter(BetaChunkGenerator::getDimensionMode),
+            Codec.BOOL.fieldOf("use_full_height").orElse(false).forGetter(b -> b.prop.useFullHeight()),
+            Codec.INT.fieldOf("sea_level").orElse(64).forGetter(b -> b.prop.seaLevel()),
+            Codec.FLOAT.fieldOf("factor").orElse(12.0f).forGetter(b -> b.prop.factor()),
+            Codec.INT.fieldOf("ground_level").orElse(68).forGetter(b -> b.prop.groundLevel()),
+            Codec.INT.fieldOf("cave_lava_level").orElse(10).forGetter(b -> b.prop.caveLavaLevel()),
+            Codec.FLOAT.fieldOf("mixing").orElse(1.0f).forGetter(b -> b.prop.mixing()),
+            Codec.BOOL.fieldOf("fixes").orElse(false).forGetter(b -> b.prop.fixes())
     ).apply(instance, instance.stable(BetaChunkGenerator::new)));
     private final Registry<Biome> biomeRegistry;
     //Content Creators
@@ -129,80 +129,30 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaProperties
 
     protected BetaChunkProvider generator;
 
-    private final boolean useFullHeight;
-    private final int seaLevel;
-    private final float factor;
-    private final int groundLevel;
-    private final int caveLavaLevel;
-    private final float mixing;
-    private final boolean fixes;
-
-    /*
-    Variables:
-    Use Full Height
-    Sea Level
-    Factor
-    Ground Level
-    Cave Lava Level
-    Mixing
-    Fixes
-
-    Faithful:
-    No
-    64
-    12.0
-    68
-    10
-    ?
-    No
-
-
-    */
+    private final BetaProperties prop;
 
     public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, String dimensionMode, boolean useFullHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes) {
         super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry));
         this.biomeRegistry = biomeRegistry;
         this.dimensionMode = dimensionMode;
-        this.useFullHeight = useFullHeight;
-        this.seaLevel = seaLevel;
-        this.factor = factor;
-        this.groundLevel = groundLevel;
-        this.caveLavaLevel = caveLavaLevel;
-        this.mixing = mixing;
-        this.fixes = fixes;
-        generator = Objects.equals(this.dimensionMode, "nether") ? new ChunkProviderHell() : new ChunkProviderGenerate(useFullHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes);
+        this.prop = new BetaProperties(useFullHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes);
+        generator = Objects.equals(this.dimensionMode, "nether") ? new ChunkProviderHell() : new ChunkProviderGenerate(this.prop);
         if(biomeSource instanceof BetaOverworldBiomeSource bobs){
             bobs.setGenerator(generator);
         }
     }
 
-    public boolean getUseFullHeight() {
-        return useFullHeight;
+    public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, String dimensionMode, BetaProperties p) {
+        this(structureSetRegistry, biomeRegistry, dimensionMode, p.useFullHeight(), p.seaLevel(), p.factor(), p.groundLevel(), p.caveLavaLevel(), p.mixing(), p.fixes());
     }
 
-    @Override
+        @Override
     public int getSeaLevel() {
-        return seaLevel;
+        return prop.seaLevel();
     }
 
-    public float getFactor() {
-        return factor;
-    }
-
-    public int getGroundLevel() {
-        return groundLevel;
-    }
-
-    public int getCaveLavaLevel() {
-        return caveLavaLevel;
-    }
-
-    public float getMixing() {
-        return mixing;
-    }
-
-    public boolean getFixes() {
-        return fixes;
+    public BetaProperties getBetaProperties() {
+        return prop;
     }
 
     public Registry<Biome> getBiomeRegistry() {
@@ -229,6 +179,12 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaProperties
     public void setStructureStarts(DynamicRegistryManager registryManager, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk, StructureTemplateManager structureTemplateManager, long seed) {
         generator.init(seed);
         super.setStructureStarts(registryManager, noiseConfig, structureAccessor, chunk, structureTemplateManager, seed);
+    }
+
+    @Override
+    public void addStructureReferences(StructureWorldAccess world, StructureAccessor structureAccessor, Chunk chunk) {
+        generator.init(world.getSeed());
+        super.addStructureReferences(world, structureAccessor, chunk);
     }
 
     @Override

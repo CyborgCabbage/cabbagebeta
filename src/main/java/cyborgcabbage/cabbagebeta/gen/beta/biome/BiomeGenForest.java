@@ -1,8 +1,8 @@
 package cyborgcabbage.cabbagebeta.gen.beta.biome;
 
-import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenBigTree;
-import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenForest;
-import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenTrees;
+import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenBigOak;
+import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenBirch;
+import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenOak;
 import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenerator;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -12,7 +12,7 @@ import java.util.Random;
 
 public class BiomeGenForest extends BiomeGenBase {
 	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
-		return random1.nextInt(5) == 0 ? new WorldGenForest(height) : (random1.nextInt(3) == 0 ? new WorldGenBigTree() : new WorldGenTrees(height));
+		return random1.nextInt(5) == 0 ? new WorldGenBirch(height) : (random1.nextInt(3) == 0 ? new WorldGenBigOak() : new WorldGenOak(height));
 	}
 
 	@Override

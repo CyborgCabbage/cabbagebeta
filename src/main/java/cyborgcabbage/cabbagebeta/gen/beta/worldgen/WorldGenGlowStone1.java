@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta.gen.beta.worldgen;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -16,8 +15,7 @@ public class WorldGenGlowStone1 extends WorldGenerator {
 		if(!world.getBlockState(new BlockPos(x, y + 1, z)).isOf(Blocks.NETHERRACK)) {
 			return false;
 		}
-		world.setBlockState(new BlockPos(x, y, z), Blocks.GLOWSTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
-
+		setBlockWithNotify(world, new BlockPos(x, y, z), Blocks.GLOWSTONE.getDefaultState());
 		for(int i6 = 0; i6 < 1500; ++i6) {
 			int i7 = x + random.nextInt(8) - random.nextInt(8);
 			int i8 = y - random.nextInt(12);
@@ -57,7 +55,7 @@ public class WorldGenGlowStone1 extends WorldGenerator {
 				}
 
 				if(i10 == 1) {
-					world.setBlockState(new BlockPos(i7, i8, i9), Blocks.GLOWSTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+					setBlockWithNotify(world, new BlockPos(i7, i8, i9), Blocks.GLOWSTONE.getDefaultState());
 				}
 			}
 		}

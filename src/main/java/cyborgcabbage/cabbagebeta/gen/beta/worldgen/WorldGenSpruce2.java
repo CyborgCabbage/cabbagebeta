@@ -9,10 +9,10 @@ import net.minecraft.world.StructureWorldAccess;
 
 import java.util.Random;
 
-public class WorldGenTaiga2 extends WorldGenerator {
+public class WorldGenSpruce2 extends WorldGenerator {
 	private int height;
 
-	public WorldGenTaiga2(int height) {
+	public WorldGenSpruce2(int height) {
 		this.height = height;
 	}
 
@@ -88,6 +88,7 @@ public class WorldGenTaiga2 extends WorldGenerator {
 						BlockState blockState = world.getBlockState(new BlockPos(x, y + i16, z));
 						if(blockState.isAir() || blockState.isIn(BlockTags.LEAVES)) {
 							world.setBlockState(new BlockPos(x, y + i16, z), Blocks.SPRUCE_LOG.getDefaultState(), Block.NOTIFY_LISTENERS);
+							Blocks.SPRUCE_LOG.getDefaultState().updateNeighbors(world, new BlockPos(x, y + i16, z), Block.NOTIFY_LISTENERS);
 						}
 					}
 

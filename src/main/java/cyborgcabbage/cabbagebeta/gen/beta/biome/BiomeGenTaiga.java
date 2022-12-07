@@ -1,7 +1,7 @@
 package cyborgcabbage.cabbagebeta.gen.beta.biome;
 
-import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenTaiga1;
-import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenTaiga2;
+import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenSpruce1;
+import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenSpruce2;
 import cyborgcabbage.cabbagebeta.gen.beta.worldgen.WorldGenerator;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -18,6 +18,6 @@ public class BiomeGenTaiga extends BiomeGenBase {
 	}
 
 	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
-		return random1.nextInt(3) == 0 ? new WorldGenTaiga1(height) : new WorldGenTaiga2(height);
+		return random1.nextInt(3) == 0 ? new WorldGenSpruce1(height) : new WorldGenSpruce2(height);
 	}
 }

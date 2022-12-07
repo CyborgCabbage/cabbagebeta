@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta.gen.beta.worldgen;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -65,7 +64,7 @@ public class WorldGenHellLava extends WorldGenerator {
 
 			if(i6 == 4 && i7 == 1) {
 				BlockPos pos = new BlockPos(x, y, z);
-				world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
+				setBlockWithNotify(world, pos, state);
 				world.createAndScheduleFluidTick(pos, state.getFluidState().getFluid(), 1);
 				//world.scheduledUpdatesAreImmediate = true;
 				//this.state.scheduledTick(world, new BlockPos(i3, i4, i5), random);

@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta.gen.beta.worldgen;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntityType;
@@ -51,14 +50,14 @@ public class WorldGenDungeons extends WorldGenerator {
 					for(zBlock = z - i8 - 1; zBlock <= z + i8 + 1; ++zBlock) {
 						var pos = new BlockPos(xBlock, yBlock, zBlock);
 						if(xBlock != x - i7 - 1 && yBlock != y - 1 && zBlock != z - i8 - 1 && xBlock != x + i7 + 1 && yBlock != y + b6 + 1 && zBlock != z + i8 + 1) {
-							world.setBlockState(pos, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+							setBlockWithNotify(world, pos, Blocks.AIR.getDefaultState());
 						} else if(yBlock >= 0 && !world.getBlockState(pos.down()).getMaterial().isSolid()) {
-							world.setBlockState(pos, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+							setBlockWithNotify(world, pos, Blocks.AIR.getDefaultState());
 						} else if(world.getBlockState(pos).getMaterial().isSolid()) {
 							if(yBlock == y - 1 && random.nextInt(4) != 0) {
-								world.setBlockState(pos, Blocks.MOSSY_COBBLESTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+								setBlockWithNotify(world, pos, Blocks.MOSSY_COBBLESTONE.getDefaultState());
 							} else {
-								world.setBlockState(pos, Blocks.COBBLESTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+								setBlockWithNotify(world, pos, Blocks.COBBLESTONE.getDefaultState());
 							}
 						}
 					}
@@ -90,7 +89,7 @@ public class WorldGenDungeons extends WorldGenerator {
 
 						if(i15 == 1) {
 							var chestPos = new BlockPos(xBlock2, y, zBlock2);
-							world.setBlockState(chestPos, Blocks.CHEST.getDefaultState(), Block.NOTIFY_LISTENERS);
+							setBlockWithNotify(world, chestPos,Blocks.CHEST.getDefaultState());
 							Optional<ChestBlockEntity> blockEntity = world.getBlockEntity(chestPos, BlockEntityType.CHEST);
 							if(blockEntity.isEmpty()) continue label110;
 							ChestBlockEntity chestBlockEntity = blockEntity.get();
@@ -111,7 +110,7 @@ public class WorldGenDungeons extends WorldGenerator {
 				}
 			}
 			var spawnerPos = new BlockPos(x, y, z);
-			world.setBlockState(spawnerPos, Blocks.SPAWNER.getDefaultState(), Block.NOTIFY_LISTENERS);
+			setBlockWithNotify(world, spawnerPos, Blocks.SPAWNER.getDefaultState());
 			Optional<MobSpawnerBlockEntity> spawner = world.getBlockEntity(spawnerPos, BlockEntityType.MOB_SPAWNER);
 			spawner.ifPresent((be) -> be.getLogic().setEntityId(pickMobSpawner(random)));
 			return true;

@@ -20,7 +20,7 @@
       "type": "cabbagebeta:beta_nether",
       "generator": {
         "type": "cabbagebeta:beta",
-        "dimension_mode": "nether"
+        "mode": "nether"
       }
     }
   }

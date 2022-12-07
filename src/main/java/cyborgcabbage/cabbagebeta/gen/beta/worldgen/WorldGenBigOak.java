@@ -8,39 +8,39 @@ import net.minecraft.world.StructureWorldAccess;
 
 import java.util.Random;
 
-public class WorldGenBigTree extends WorldGenerator {
+public class WorldGenBigOak extends WorldGenerator {
 	static final byte[] field_882_a = new byte[]{(byte)2, (byte)0, (byte)0, (byte)1, (byte)2, (byte)1};
-	final Random field_881_b = new Random();
+	final Random rand = new Random();
 	StructureWorldAccess worldObj;
 	final int[] basePos = new int[]{0, 0, 0};
-	int field_878_e = 0;
+	int treeHeight = 0;
 	int height;
-	final double field_876_g = 0.618D;
+	final double goldenRatio = 0.618D;
 	double field_875_h = 1.0D;
 	final double field_874_i = 0.381D;
 	double field_873_j = 1.0D;
 	double field_872_k = 1.0D;
 	final int field_871_l = 1;
-	int field_870_m = 12;
+	int maxTreeHeight = 12;
 	int field_869_n = 4;
 	int[][] field_868_o;
 
 	final BlockState leaf = Blocks.OAK_LEAVES.getDefaultState();
 	final BlockState log = Blocks.OAK_LOG.getDefaultState();
 
-	void func_521_a() {
-		this.height = (int)((double)this.field_878_e * this.field_876_g);
-		if(this.height >= this.field_878_e) {
-			this.height = this.field_878_e - 1;
+	void step1() {
+		this.height = (int)((double)this.treeHeight * this.goldenRatio);
+		if(this.height >= this.treeHeight) {
+			this.height = this.treeHeight - 1;
 		}
 
-		int i1 = (int)(1.382D + Math.pow(this.field_872_k * (double)this.field_878_e / 13.0D, 2.0D));
+		int i1 = (int)(1.382D + Math.pow(this.field_872_k * (double)this.treeHeight / 13.0D, 2.0D));
 		if(i1 < 1) {
 			i1 = 1;
 		}
 
-		int[][] i2 = new int[i1 * this.field_878_e][4];
-		int i3 = this.basePos[1] + this.field_878_e - this.field_869_n;
+		int[][] i2 = new int[i1 * this.treeHeight][4];
+		int i3 = this.basePos[1] + this.treeHeight - this.field_869_n;
 		int i4 = 1;
 		int i5 = this.basePos[1] + this.height;
 		int i6 = i3 - this.basePos[1];
@@ -59,8 +59,8 @@ public class WorldGenBigTree extends WorldGenerator {
 					--i6;
 				} else {
 					for(double d9 = 0.5D; i7 < i1; ++i7) {
-						double d11 = this.field_873_j * (double)f8 * ((double)this.field_881_b.nextFloat() + 0.328D);
-						double d13 = (double)this.field_881_b.nextFloat() * 2.0D * 3.14159D;
+						double d11 = this.field_873_j * (double)f8 * ((double)this.rand.nextFloat() + 0.328D);
+						double d13 = (double)this.rand.nextFloat() * 2.0D * 3.14159D;
 						int i15 = (int)Math.floor(d11 * Math.sin(d13) + (double)this.basePos[0] + d9);
 						int i16 = (int)Math.floor(d11 * Math.cos(d13) + (double)this.basePos[2] + d9);
 						int[] i17 = new int[]{i15, i3, i16};
@@ -96,7 +96,7 @@ public class WorldGenBigTree extends WorldGenerator {
 		}
 	}
 
-	void func_523_a(int i1, int i2, int i3, float f4, byte b5, BlockState state) {
+	void func_523_a(int i1, int i2, int i3, float f4, byte b5, BlockState leafState) {
 		int i7 = (int)((double)f4 + 0.618D);
 		byte b8 = field_882_a[b5];
 		byte b9 = field_882_a[b5 + 3];
@@ -123,10 +123,11 @@ public class WorldGenBigTree extends WorldGenerator {
 						i11[b9] = i10[b9] + i13;
 						var pos = new BlockPos(i11[0], i11[1], i11[2]);
 						BlockState i14 = this.worldObj.getBlockState(pos);
-						if(!i14.isAir() && i14.getBlock() != state.getBlock()) {
+						if(!i14.isAir() && i14.getBlock() != leafState.getBlock()) {
 							++i13;
 						} else {
-							this.worldObj.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
+							this.worldObj.setBlockState(pos, leafState, Block.NOTIFY_LISTENERS);
+
 							++i13;
 						}
 					}
@@ -137,11 +138,11 @@ public class WorldGenBigTree extends WorldGenerator {
 	}
 
 	float func_528_a(int i1) {
-		if((double)i1 < (double)((float)this.field_878_e) * 0.3D) {
+		if((double)i1 < (double)((float)this.treeHeight) * 0.3D) {
 			return -1.618F;
 		} else {
-			float f2 = (float)this.field_878_e / 2.0F;
-			float f3 = (float)this.field_878_e / 2.0F - (float)i1;
+			float f2 = (float)this.treeHeight / 2.0F;
+			float f3 = (float)this.treeHeight / 2.0F - (float)i1;
 			float f4;
 			if(f3 == 0.0F) {
 				f4 = f2;
@@ -170,7 +171,7 @@ public class WorldGenBigTree extends WorldGenerator {
 
 	}
 
-	void func_522_a(int[] i1, int[] i2, BlockState block) {
+	void placeLog(int[] i1, int[] i2, BlockState block) {
 		int[] i4 = new int[]{0, 0, 0};
 		byte b5 = 0;
 
@@ -202,12 +203,13 @@ public class WorldGenBigTree extends WorldGenerator {
 				i14[b7] = (int)Math.floor((double)i1[b7] + (double)i15 * d10 + 0.5D);
 				i14[b8] = (int)Math.floor((double)i1[b8] + (double)i15 * d12 + 0.5D);
 				this.worldObj.setBlockState(new BlockPos(i14[0], i14[1], i14[2]), block, Block.NOTIFY_LISTENERS);
+				block.updateNeighbors(worldObj, new BlockPos(i14[0], i14[1], i14[2]), Block.NOTIFY_ALL);
 			}
 
 		}
 	}
 
-	void func_518_b() {
+	void step2() {
 		int i1 = 0;
 
 		for(int i2 = this.field_868_o.length; i1 < i2; ++i1) {
@@ -220,32 +222,32 @@ public class WorldGenBigTree extends WorldGenerator {
 	}
 
 	boolean func_527_c(int i1) {
-		return (double)i1 >= (double)this.field_878_e * 0.2D;
+		return (double)i1 >= (double)this.treeHeight * 0.2D;
 	}
 
-	void func_529_c() {
+	void step3() {
 		int i1 = this.basePos[0];
 		int i2 = this.basePos[1];
 		int i3 = this.basePos[1] + this.height;
 		int i4 = this.basePos[2];
 		int[] i5 = new int[]{i1, i2, i4};
 		int[] i6 = new int[]{i1, i3, i4};
-		this.func_522_a(i5, i6, log);
+		this.placeLog(i5, i6, log);
 		if(this.field_871_l == 2) {
 			++i5[0];
 			++i6[0];
-			this.func_522_a(i5, i6, log);
+			this.placeLog(i5, i6, log);
 			++i5[2];
 			++i6[2];
-			this.func_522_a(i5, i6, log);
+			this.placeLog(i5, i6, log);
 			i5[0] += -1;
 			i6[0] += -1;
-			this.func_522_a(i5, i6, log);
+			this.placeLog(i5, i6, log);
 		}
 
 	}
 
-	void func_525_d() {
+	void step4() {
 		int i1 = 0;
 		int i2 = this.field_868_o.length;
 
@@ -255,7 +257,7 @@ public class WorldGenBigTree extends WorldGenerator {
 			i3[1] = i4[3];
 			int i6 = i3[1] - this.basePos[1];
 			if(this.func_527_c(i6)) {
-				this.func_522_a(i3, i5, log);
+				this.placeLog(i3, i5, log);
 			}
 		}
 
@@ -305,9 +307,9 @@ public class WorldGenBigTree extends WorldGenerator {
 		}
 	}
 
-	boolean func_519_e() {
+	boolean canGenerate() {
 		int[] i1 = new int[]{this.basePos[0], this.basePos[1], this.basePos[2]};
-		int[] i2 = new int[]{this.basePos[0], this.basePos[1] + this.field_878_e - 1, this.basePos[2]};
+		int[] i2 = new int[]{this.basePos[0], this.basePos[1] + this.treeHeight - 1, this.basePos[2]};
 		BlockState i3 = this.worldObj.getBlockState(new BlockPos(this.basePos[0], this.basePos[1] - 1, this.basePos[2]));
 		if(!i3.isOf(Blocks.DIRT) && !i3.isOf(Blocks.GRASS_BLOCK)) {
 			return false;
@@ -318,14 +320,14 @@ public class WorldGenBigTree extends WorldGenerator {
 			} else if(i4 < 6) {
 				return false;
 			} else {
-				this.field_878_e = i4;
+				this.treeHeight = i4;
 				return true;
 			}
 		}
 	}
 
 	public void func_517_a(double d1, double d3, double d5) {
-		this.field_870_m = (int)(d1 * 12.0D);
+		this.maxTreeHeight = (int)(d1 * 12.0D);
 		if(d1 > 0.5D) {
 			this.field_869_n = 5;
 		}
@@ -336,22 +338,21 @@ public class WorldGenBigTree extends WorldGenerator {
 
 	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
 		this.worldObj = world;
-		long j6 = random.nextLong();
-		this.field_881_b.setSeed(j6);
+		this.rand.setSeed(random.nextLong());
 		this.basePos[0] = x;
 		this.basePos[1] = y;
 		this.basePos[2] = z;
-		if(this.field_878_e == 0) {
-			this.field_878_e = 5 + this.field_881_b.nextInt(this.field_870_m);
+		if(this.treeHeight == 0) {
+			this.treeHeight = 5 + this.rand.nextInt(this.maxTreeHeight);
 		}
 
-		if(!this.func_519_e()) {
+		if(!this.canGenerate()) {
 			return false;
 		} else {
-			this.func_521_a();
-			this.func_518_b();
-			this.func_529_c();
-			this.func_525_d();
+			this.step1();
+			this.step2();
+			this.step3();
+			this.step4();
 			return true;
 		}
 	}

@@ -1,3 +1,21 @@
 {
-  "generator.cabbagebeta.beta": "Beta"
+  "generator.cabbagebeta.beta": "Beta",
+  "createWorld.customize.beta.title" : "Beta World Customization",
+  "createWorld.customize.beta.preset" : "Preset",
+  "createWorld.customize.beta.use_full_height" : "Use Full Height",
+  "createWorld.customize.beta.sea_level" : "Sea Level",
+  "createWorld.customize.beta.factor" : "Factor",
+  "createWorld.customize.beta.ground_level" : "Ground Level",
+  "createWorld.customize.beta.cave_lava_level" : "Cave Lava Level",
+  "createWorld.customize.beta.mixing" : "Mixing",
+  "createWorld.customize.beta.fixes" : "Bug Fixes",
+
+  "createWorld.customize.beta" : "Preset",
+
+  "options.beta_preset.faithful" : "Faithful",
+  "options.beta_preset.improved" : "Improved",
+  "options.beta_preset.amplified" : "Amplified",
+  "options.beta_preset.flooded" : "Flooded",
+  "options.beta_preset.smooth" : "Smooth",
+  "options.beta_preset.custom" : "Custom"
 }

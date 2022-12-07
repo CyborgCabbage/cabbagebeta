@@ -1,5 +1,6 @@
 package cyborgcabbage.cabbagebeta.gen.beta;
 
+import cyborgcabbage.cabbagebeta.gen.BetaProperties;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import cyborgcabbage.cabbagebeta.gen.beta.map.MapGenBase;
 import cyborgcabbage.cabbagebeta.gen.beta.map.MapGenCaves;
@@ -39,16 +40,11 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     final protected MapGenBase caveGen;
     private BetaBiomes terrainBiomes;
     private BetaBiomesSampler externalBiomes;
-    private final boolean useFullHeight;
-    private final int seaLevel;
-    private final float factor;
-    private final int groundLevel;
-    private final float mixing;
-    private final boolean fixes;
+    private final BetaProperties prop;
 
     //record BiomeSample(BiomeGenBase biome, double temp, double humid){};
 
-    public ChunkProviderGenerate(boolean useFullHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes) {
+    public ChunkProviderGenerate(BetaProperties properties) {
         //Calculate Average temperature and humidity for each biome
         /*ArrayList<BiomeSample> samples = new ArrayList<>();
         int k = 797;
@@ -67,13 +63,9 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
             OptionalDouble averageHumid = list.stream().mapToDouble(BiomeSample::humid).average();
             System.out.println(biome.biomeName+":"+String.format("%.2f",averageTemp.orElse(0.9))+":"+String.format("%.2f",averageHumid.orElse(0.5)));
         });*/
-        this.useFullHeight = useFullHeight;
-        this.seaLevel = seaLevel;
-        this.factor = factor;
-        this.groundLevel = groundLevel;
-        this.caveGen = new MapGenCaves(caveLavaLevel);
-        this.mixing = mixing;
-        this.fixes = fixes;
+        this.prop = properties;
+        this.caveGen = new MapGenCaves(properties.caveLavaLevel());
+
     }
 
     protected void init(long seed) {
@@ -130,8 +122,8 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                                 blockPos.setZ(zNoiseIndex * 4 + zSub);
                                 double d53 = terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub];
                                 Block blockState = Blocks.AIR;
-                                if(yNoiseIndex * 8 + ySub < seaLevel) {
-                                    if(d53 < 0.5D && yNoiseIndex * 8 + ySub >= seaLevel - 1) {
+                                if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
+                                    if(d53 < 0.5D && yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
                                         blockState = Blocks.ICE;
                                     } else {
                                         blockState = Blocks.WATER;
@@ -161,7 +153,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     public void replaceBlocksForBiome(Chunk chunk, BiomeGenBase[] biomeGenBase4) {
         ChunkPos pos = chunk.getPos();
         double scale = 8.0D / 256D;
-        if(fixes){
+        if(prop.fixes()){
             this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale, 1, scale);
             this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
             this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale * 2.0D, scale * 2.0D, scale * 2.0D);
@@ -196,7 +188,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                                 if(stone <= 0) {
                                     topBlock = Blocks.AIR.getDefaultState();
                                     fillerBlock = Blocks.STONE.getDefaultState();
-                                } else if(yBlock >= seaLevel - 4 && yBlock <= seaLevel + 1) {
+                                } else if(yBlock >= prop.seaLevel() - 4 && yBlock <= prop.seaLevel() + 1) {
                                     topBlock = biomeGenBase10.topBlock;
                                     fillerBlock = biomeGenBase10.fillerBlock;
                                     if(gravel) {
@@ -209,12 +201,12 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                                     }
                                 }
 
-                                if(yBlock < seaLevel && topBlock == Blocks.AIR.getDefaultState()) {
+                                if(yBlock < prop.seaLevel() && topBlock == Blocks.AIR.getDefaultState()) {
                                     topBlock = Blocks.WATER.getDefaultState();
                                 }
 
                                 i14 = stone;
-                                if(yBlock >= seaLevel - 1) {
+                                if(yBlock >= prop.seaLevel() - 1) {
                                     block = topBlock;
                                 } else {
                                     block = fillerBlock;
@@ -267,7 +259,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
         for(int xNoiseIndex = 0; xNoiseIndex < xNoiseSize; ++xNoiseIndex) {
             int xSample;
-            if(fixes){
+            if(prop.fixes()){
                 xSample = xNoiseIndex * 4;
                 if(xSample > 15) xSample = 15;
             }else{
@@ -276,7 +268,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
             for(int zNoiseIndex = 0; zNoiseIndex < zNoiseSize; ++zNoiseIndex) {
                 int zSample;
-                if(fixes){
+                if(prop.fixes()){
                     zSample = zNoiseIndex * 4;
                     if(zSample > 15) zSample = 15;
                 }else{
@@ -323,18 +315,18 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
                 highFreqHumid += 0.5D;
                 lowFreq2d3 = lowFreq2d3 * (double) 17 / 16.0D;
-                double groundLevelLocal = (double)groundLevel/8.0 + lowFreq2d3 * 4.0D;
+                double groundLevelLocal = (double)prop.groundLevel()/8.0 + lowFreq2d3 * 4.0D;
                 ++noiseIndex2;
 
                 for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
-                    double bias = ((double)yNoiseIndex - groundLevelLocal) * factor / highFreqHumid;
+                    double bias = ((double)yNoiseIndex - groundLevelLocal) * prop.factor() / highFreqHumid;
                     if(bias < 0.0D) {
                         bias *= 4.0D;
                     }
 
                     double a = this.lowFreq3d16a[noiseIndex] / 512.0D;
                     double b = this.lowFreq3d16b[noiseIndex] / 512.0D;
-                    double mix = this.highFreq3d8[noiseIndex] / 20.0D * mixing + 0.5D;
+                    double mix = this.highFreq3d8[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
                     double noiseValue;
                     if(mix < 0.0D) {
                         noiseValue = a;
@@ -443,10 +435,13 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
             for(int z = chunkZ + 8; z < chunkZ + 8 + 16; ++z) {
                 int relX = x - (chunkX + 8);
                 int relZ = z - (chunkZ + 8);
-                int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-                double d23 = this.generatedTemperatures[relX * 16 + relZ] - (double)(topY - 64) / 64.0D * 0.3d;
-                if(d23 < 0.5D && topY > 0 && topY < getHeight() && world.isAir(new BlockPos(x, topY, z)) && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial().isSolid() && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial() != Material.ICE) {
-                    world.setBlockState(new BlockPos(x, topY, z), Blocks.SNOW.getDefaultState(), Block.NOTIFY_ALL);
+                int surfaceY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                double temperature = this.generatedTemperatures[relX * 16 + relZ] - (double)(surfaceY - 64) / 64.0D * 0.3d;
+                BlockPos.Mutable blockPosTop = new BlockPos.Mutable(x, surfaceY, z);
+                BlockState stateBelow = world.getBlockState(blockPosTop.down());
+                if(temperature < 0.5D && surfaceY > 0 && surfaceY < getHeight() && world.isAir(blockPosTop) && stateBelow.getMaterial().isSolid() && stateBelow.getMaterial() != Material.ICE) {
+                    world.setBlockState(blockPosTop, Blocks.SNOW.getDefaultState(), Block.NOTIFY_ALL);
+                    Blocks.SNOW.getDefaultState().updateNeighbors(world, blockPosTop, Block.NOTIFY_ALL);
                 }
             }
         }
@@ -506,6 +501,6 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     }
 
     public int getHeight(){
-        return useFullHeight ? 256 : 128;
+        return prop.useFullHeight() ? 256 : 128;
     }
 }
