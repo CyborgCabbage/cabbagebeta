@@ -221,8 +221,8 @@ public class BiomeGenBase {
 		iceDesert.topBlock = iceDesert.fillerBlock = Blocks.SAND.getDefaultState();
 	}
 
-	public WorldGenerator getRandomWorldGenForTrees(Random random1) {
-		return random1.nextInt(10) == 0 ? new WorldGenBigTree() : new WorldGenTrees();
+	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
+		return random1.nextInt(10) == 0 ? new WorldGenBigTree() : new WorldGenTrees(height);
 	}
 
 	protected BiomeGenBase setEnableSnow() {

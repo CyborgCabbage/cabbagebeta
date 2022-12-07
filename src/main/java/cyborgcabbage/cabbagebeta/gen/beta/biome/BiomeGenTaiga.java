@@ -17,7 +17,7 @@ public class BiomeGenTaiga extends BiomeGenBase {
 		return builder;
 	}
 
-	public WorldGenerator getRandomWorldGenForTrees(Random random1) {
-		return random1.nextInt(3) == 0 ? new WorldGenTaiga1() : new WorldGenTaiga2();
+	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
+		return random1.nextInt(3) == 0 ? new WorldGenTaiga1(height) : new WorldGenTaiga2(height);
 	}
 }

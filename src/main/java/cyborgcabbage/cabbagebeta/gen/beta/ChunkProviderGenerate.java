@@ -36,13 +36,19 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     double[] highFreq2d10;
     double[] lowFreq2d16;
     private double[] generatedTemperatures;
-    final protected MapGenBase caveGen = new MapGenCaves();
+    final protected MapGenBase caveGen;
     private BetaBiomes terrainBiomes;
     private BetaBiomesSampler externalBiomes;
+    private final boolean useFullHeight;
+    private final int seaLevel;
+    private final float factor;
+    private final int groundLevel;
+    private final float mixing;
+    private final boolean fixes;
 
     //record BiomeSample(BiomeGenBase biome, double temp, double humid){};
 
-    public ChunkProviderGenerate() {
+    public ChunkProviderGenerate(boolean useFullHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes) {
         //Calculate Average temperature and humidity for each biome
         /*ArrayList<BiomeSample> samples = new ArrayList<>();
         int k = 797;
@@ -61,6 +67,13 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
             OptionalDouble averageHumid = list.stream().mapToDouble(BiomeSample::humid).average();
             System.out.println(biome.biomeName+":"+String.format("%.2f",averageTemp.orElse(0.9))+":"+String.format("%.2f",averageHumid.orElse(0.5)));
         });*/
+        this.useFullHeight = useFullHeight;
+        this.seaLevel = seaLevel;
+        this.factor = factor;
+        this.groundLevel = groundLevel;
+        this.caveGen = new MapGenCaves(caveLavaLevel);
+        this.mixing = mixing;
+        this.fixes = fixes;
     }
 
     protected void init(long seed) {
@@ -80,25 +93,24 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
     public void generateTerrain(Chunk chunk) {
         ChunkPos pos = chunk.getPos();
-        byte horizontalNoiseSize = 4;
-        byte seaLevel = 64;
+        int horizontalNoiseSize = 4;
         int xNoiseSize = horizontalNoiseSize + 1;
-        byte yNoiseSize = 17;
-        int zNoiseSIze = horizontalNoiseSize + 1;
-        this.terrainNoiseValues = this.generateTerrainNoise(this.terrainNoiseValues, pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSIze);
+        int yNoiseSize = getHeight()/8+1;
+        int zNoiseSize = horizontalNoiseSize + 1;
+        this.terrainNoiseValues = this.generateTerrainNoise(this.terrainNoiseValues, pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize);
         BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
         for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
             for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
-                for(int yNoiseIndex = 0; yNoiseIndex < 16; ++yNoiseIndex) {
+                for(int yNoiseIndex = 0; yNoiseIndex < getHeight()/8; ++yNoiseIndex) {
                     double yFrac = 0.125D;
-                    double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSIze + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSIze + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSIze + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSIze + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSIze + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * yFrac;
-                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSIze + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * yFrac;
-                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSIze + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * yFrac;
-                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSIze + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * yFrac;
+                    double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                    double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                    double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                    double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * yFrac;
+                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * yFrac;
+                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * yFrac;
+                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * yFrac;
 
                     for(int ySub = 0; ySub < 8; ++ySub) {
                         blockPos.setY(yNoiseIndex * 8 + ySub);
@@ -148,11 +160,16 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
     public void replaceBlocksForBiome(Chunk chunk, BiomeGenBase[] biomeGenBase4) {
         ChunkPos pos = chunk.getPos();
-        byte b5 = 64;
         double scale = 8.0D / 256D;
-        this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale, scale, 1.0D);
-        this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
-        this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale * 2.0D, scale * 2.0D, scale * 2.0D);
+        if(fixes){
+            this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale, 1, scale);
+            this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
+            this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale * 2.0D, scale * 2.0D, scale * 2.0D);
+        }else {
+            this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale, scale, 1.0D);
+            this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
+            this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale * 2.0D, scale * 2.0D, scale * 2.0D);
+        }
         BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
         for(int h1 = 0; h1 < 16; ++h1) {
             blockPos.setZ(h1);
@@ -165,7 +182,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 int i14 = -1;
                 BlockState topBlock = biomeGenBase10.topBlock;
                 BlockState fillerBlock = biomeGenBase10.fillerBlock;
-                for(int yBlock = 127; yBlock >= 0; --yBlock) {
+                for(int yBlock = getHeight()-1; yBlock >= 0; --yBlock) {
                     blockPos.setY(yBlock);
                     BlockState block = null;
                     if(yBlock <= rand.nextInt(5)) {
@@ -179,7 +196,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                                 if(stone <= 0) {
                                     topBlock = Blocks.AIR.getDefaultState();
                                     fillerBlock = Blocks.STONE.getDefaultState();
-                                } else if(yBlock >= b5 - 4 && yBlock <= b5 + 1) {
+                                } else if(yBlock >= seaLevel - 4 && yBlock <= seaLevel + 1) {
                                     topBlock = biomeGenBase10.topBlock;
                                     fillerBlock = biomeGenBase10.fillerBlock;
                                     if(gravel) {
@@ -192,12 +209,12 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                                     }
                                 }
 
-                                if(yBlock < b5 && topBlock == Blocks.AIR.getDefaultState()) {
+                                if(yBlock < seaLevel && topBlock == Blocks.AIR.getDefaultState()) {
                                     topBlock = Blocks.WATER.getDefaultState();
                                 }
 
                                 i14 = stone;
-                                if(yBlock >= b5 - 1) {
+                                if(yBlock >= seaLevel - 1) {
                                     block = topBlock;
                                 } else {
                                     block = fillerBlock;
@@ -249,9 +266,22 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         int samplePeriod = 16 / xNoiseSize;
 
         for(int xNoiseIndex = 0; xNoiseIndex < xNoiseSize; ++xNoiseIndex) {
-            int xSample = xNoiseIndex * samplePeriod + samplePeriod / 2;
+            int xSample;
+            if(fixes){
+                xSample = xNoiseIndex * 4;
+                if(xSample > 15) xSample = 15;
+            }else{
+                xSample = xNoiseIndex * samplePeriod + samplePeriod / 2;
+            }
+
             for(int zNoiseIndex = 0; zNoiseIndex < zNoiseSize; ++zNoiseIndex) {
-                int zSample = zNoiseIndex * samplePeriod + samplePeriod / 2;
+                int zSample;
+                if(fixes){
+                    zSample = zNoiseIndex * 4;
+                    if(zSample > 15) zSample = 15;
+                }else{
+                    zSample = zNoiseIndex * samplePeriod + samplePeriod / 2;
+                }
                 double tempVal = temp[xSample * 16 + zSample];
                 double humidityVal = humidity[xSample * 16 + zSample] * tempVal;
                 humidityVal = 1.0D - humidityVal;
@@ -292,19 +322,19 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 }
 
                 highFreqHumid += 0.5D;
-                lowFreq2d3 = lowFreq2d3 * (double)yNoiseSize / 16.0D;
-                double d31 = (double)yNoiseSize / 2.0D + lowFreq2d3 * 4.0D;
+                lowFreq2d3 = lowFreq2d3 * (double) 17 / 16.0D;
+                double groundLevelLocal = (double)groundLevel/8.0 + lowFreq2d3 * 4.0D;
                 ++noiseIndex2;
 
                 for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
-                    double bias = ((double)yNoiseIndex - d31) * 12.0D / highFreqHumid;
+                    double bias = ((double)yNoiseIndex - groundLevelLocal) * factor / highFreqHumid;
                     if(bias < 0.0D) {
                         bias *= 4.0D;
                     }
 
                     double a = this.lowFreq3d16a[noiseIndex] / 512.0D;
                     double b = this.lowFreq3d16b[noiseIndex] / 512.0D;
-                    double mix = this.highFreq3d8[noiseIndex] / 20.0D + 0.5D;
+                    double mix = this.highFreq3d8[noiseIndex] / 20.0D * mixing + 0.5D;
                     double noiseValue;
                     if(mix < 0.0D) {
                         noiseValue = a;
@@ -345,7 +375,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         generateFeatureRare(context, new WorldGenLakes(Blocks.WATER.getDefaultState()), 4);
         if(this.rand.nextInt(8) == 0) {
             int i13 = chunkX + this.rand.nextInt(16) + 8;
-            int i14 = this.rand.nextInt(this.rand.nextInt(120) + 8);
+            int i14 = this.rand.nextInt(this.rand.nextInt(getHeight()-8) + 8);
             int i15 = chunkZ + this.rand.nextInt(16) + 8;
             if(i14 < 64 || this.rand.nextInt(10) == 0) {
                 (new WorldGenLakes(Blocks.LAVA.getDefaultState())).generate(world, this.rand, i13, i14, i15);
@@ -353,9 +383,9 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         }
         generateFeature(context, new WorldGenDungeons(), 8, true);
         generateFeature(context, new WorldGenClay(32), 10, false);
-        generateMineable(context, Blocks.DIRT.getDefaultState(), 32, 128, 20);
-        generateMineable(context, Blocks.GRAVEL.getDefaultState(), 32, 128, 10);
-        generateMineable(context, Blocks.COAL_ORE.getDefaultState(), 16, 128, 20);
+        generateMineable(context, Blocks.DIRT.getDefaultState(), 32, getHeight(), 20);
+        generateMineable(context, Blocks.GRAVEL.getDefaultState(), 32, getHeight(), 10);
+        generateMineable(context, Blocks.COAL_ORE.getDefaultState(), 16, getHeight(), 20);
         generateMineable(context, Blocks.IRON_ORE.getDefaultState(), 8, 64, 20);
         generateMineable(context, Blocks.GOLD_ORE.getDefaultState(), 8, 32, 2);
         generateMineable(context, Blocks.REDSTONE_ORE.getDefaultState(), 7, 16, 8);
@@ -374,7 +404,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         for(int i = 0; i < treeCount; ++i) {
             int x = chunkX + this.rand.nextInt(16) + 8;
             int z = chunkZ + this.rand.nextInt(16) + 8;
-            WorldGenerator generator = biome.getRandomWorldGenForTrees(this.rand);
+            WorldGenerator generator = biome.getRandomWorldGenForTrees(this.rand, getHeight());
             generator.func_517_a(1.0D, 1.0D, 1.0D);
             generator.generate(world, this.rand, x, world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z), z);
         }
@@ -387,7 +417,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
             }
 
             int i19 = chunkX + this.rand.nextInt(16) + 8;
-            int i20 = this.rand.nextInt(128);
+            int i20 = this.rand.nextInt(getHeight());
             int i21 = chunkZ + this.rand.nextInt(16) + 8;
 
             (new WorldGenTallGrass(b26 == 1 ? Blocks.GRASS.getDefaultState() : Blocks.FERN.getDefaultState())).generate(world, this.rand, i19, i20, i21);
@@ -404,8 +434,8 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         if(biome == BiomeGenBase.desert) {
             generateFeature(context, new WorldGenCactus(), 10, true);
         }
-        generateFeature(context, new WorldGenLiquids(Blocks.WATER.getDefaultState()), 50, true, r -> r.nextInt(r.nextInt(120) + 8));
-        generateFeature(context, new WorldGenLiquids(Blocks.LAVA.getDefaultState()), 20, true, r -> r.nextInt(r.nextInt(r.nextInt(112) + 8) + 8));
+        generateFeature(context, new WorldGenLiquids(Blocks.WATER.getDefaultState()), 50, true, r -> r.nextInt(r.nextInt(getHeight()-8) + 8));
+        generateFeature(context, new WorldGenLiquids(Blocks.LAVA.getDefaultState()), 20, true, r -> r.nextInt(r.nextInt(r.nextInt(getHeight()-16) + 8) + 8));
 
         this.generatedTemperatures = terrainBiomes.getTemperatures(this.generatedTemperatures, chunkX + 8, chunkZ + 8, 16, 16);
 
@@ -415,7 +445,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 int relZ = z - (chunkZ + 8);
                 int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
                 double d23 = this.generatedTemperatures[relX * 16 + relZ] - (double)(topY - 64) / 64.0D * 0.3d;
-                if(d23 < 0.5D && topY > 0 && topY < 128 && world.isAir(new BlockPos(x, topY, z)) && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial().isSolid() && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial() != Material.ICE) {
+                if(d23 < 0.5D && topY > 0 && topY < getHeight() && world.isAir(new BlockPos(x, topY, z)) && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial().isSolid() && world.getBlockState(new BlockPos(x, topY - 1, z)).getMaterial() != Material.ICE) {
                     world.setBlockState(new BlockPos(x, topY, z), Blocks.SNOW.getDefaultState(), Block.NOTIFY_ALL);
                 }
             }
@@ -427,7 +457,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     record WorldGeneratorContext(StructureWorldAccess world, int x, int z){}
 
     private void generateFeature(WorldGeneratorContext context, WorldGenerator generator, int count, boolean offset) {
-        generateFeature(context, generator, count, offset, (r) -> r.nextInt(128));
+        generateFeature(context, generator, count, offset, (r) -> r.nextInt(getHeight()));
     }
 
     private void generateFeature(WorldGeneratorContext context, WorldGenerator generator, int count, boolean offset, GenerateCoordinate generateCoordinate){
@@ -446,7 +476,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     private void generateFeatureRare(WorldGeneratorContext context, WorldGenerator generator, int scarcity){
         if(rand.nextInt(scarcity) == 0) {
             int x = context.x() + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(128);
+            int y = this.rand.nextInt(getHeight());
             int z = context.z() + this.rand.nextInt(16) + 8;
             generator.generate(context.world(), this.rand, x, y, z);
         }
@@ -473,5 +503,9 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     @Override
     public BiomeGenBase getBiome(int x, int z) {
         return externalBiomes.getBiomeAtBlock(x, z);
+    }
+
+    public int getHeight(){
+        return useFullHeight ? 256 : 128;
     }
 }

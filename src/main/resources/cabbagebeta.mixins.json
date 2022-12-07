@@ -6,6 +6,7 @@
   "mixins": [
   ],
   "client": [
+    "MoreOptionsDialogMixin"
   ],
   "injectors": {
     "defaultRequire": 1

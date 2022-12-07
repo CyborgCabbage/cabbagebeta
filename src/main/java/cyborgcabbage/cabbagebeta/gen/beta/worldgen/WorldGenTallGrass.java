@@ -15,21 +15,22 @@ public class WorldGenTallGrass extends WorldGenerator {
 		this.state = i1;
 	}
 
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
+		BlockPos.Mutable blockPos = new BlockPos.Mutable(0,0,0);
 		BlockState i11;
-		while (((i11 = world.getBlockState(new BlockPos(i3, i4, i5))).isAir() || i11.isIn(BlockTags.LEAVES)) && i4 > 0) {
-			--i4;
+		while (((i11 = world.getBlockState(blockPos.set(x, y, z))).isAir() || i11.isIn(BlockTags.LEAVES)) && y > 0) {
+			--y;
 		}
 
-		for(int i7 = 0; i7 < 128; ++i7) {
-			int i8 = i3 + random.nextInt(8) - random.nextInt(8);
-			int i9 = i4 + random.nextInt(4) - random.nextInt(4);
-			int i10 = i5 + random.nextInt(8) - random.nextInt(8);
-			if(world.isAir(new BlockPos(i8, i9, i10)) && state.canPlaceAt(world, new BlockPos(i8, i9, i10))) {
-				world.setBlockState(new BlockPos(i8, i9, i10), state, Block.NOTIFY_LISTENERS);
+		for(int i = 0; i < 128; ++i) {
+			int rx = x + random.nextInt(8) - random.nextInt(8);
+			int ry = y + random.nextInt(4) - random.nextInt(4);
+			int rz = z + random.nextInt(8) - random.nextInt(8);
+			blockPos.set(rx, ry, rz);
+			if(world.isAir(blockPos) && state.canPlaceAt(world, blockPos)) {
+				world.setBlockState(blockPos, state, Block.NOTIFY_LISTENERS);
 			}
 		}
-
 		return true;
 	}
 }

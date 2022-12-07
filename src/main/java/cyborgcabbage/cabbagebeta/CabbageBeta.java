@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta;
 
-import cyborgcabbage.cabbagebeta.gen.beta.BetaBiomes;
 import cyborgcabbage.cabbagebeta.gen.beta.BetaChunkGenerator;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import net.fabricmc.api.ModInitializer;
@@ -9,6 +8,7 @@ import net.minecraft.util.registry.BuiltinRegistries;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.WorldPreset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +31,8 @@ public class CabbageBeta implements ModInitializer {
 	public static final RegistryKey<Biome> BETA_HELL = RegistryKey.of(Registry.BIOME_KEY, id("beta_hell"));
 	public static final RegistryKey<Biome> BETA_SKY = RegistryKey.of(Registry.BIOME_KEY, id("beta_sky"));
 
-	public static final BetaBiomes BETA_BIOMES = new BetaBiomes(BetaChunkGenerator.toSeed("Glacier"));
-
+	//Beta Preset
+	public static final RegistryKey<WorldPreset> BETA_PRESET = RegistryKey.of(Registry.WORLD_PRESET_KEY, id("beta"));
 	@Override
 	public void onInitialize() {
 		Registry.register(Registry.CHUNK_GENERATOR, id("beta"), BetaChunkGenerator.CODEC);

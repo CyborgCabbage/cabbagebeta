@@ -17,13 +17,13 @@ public class WorldGenLakes extends WorldGenerator {
 		this.state = i1;
 	}
 
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
-		i3 -= 8;
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
+		x -= 8;
 
-		for(i5 -= 8; i4 > 0 && world.isAir(new BlockPos(i3, i4, i5)); --i4) {
+		for(z -= 8; y > 0 && world.isAir(new BlockPos(x, y, z)); --y) {
 		}
 
-		i4 -= 4;
+		y -= 4;
 		boolean[] z6 = new boolean[2048];
 		int i7 = random.nextInt(4) + 4;
 
@@ -59,12 +59,12 @@ public class WorldGenLakes extends WorldGenerator {
 				for(i10 = 0; i10 < 8; ++i10) {
 					z33 = !z6[(i8 * 16 + i32) * 8 + i10] && (i8 < 15 && z6[((i8 + 1) * 16 + i32) * 8 + i10] || i8 > 0 && z6[((i8 - 1) * 16 + i32) * 8 + i10] || i32 < 15 && z6[(i8 * 16 + i32 + 1) * 8 + i10] || i32 > 0 && z6[(i8 * 16 + (i32 - 1)) * 8 + i10] || i10 < 7 && z6[(i8 * 16 + i32) * 8 + i10 + 1] || i10 > 0 && z6[(i8 * 16 + i32) * 8 + (i10 - 1)]);
 					if(z33) {
-						Material material12 = world.getBlockState(new BlockPos(i3 + i8, i4 + i10, i5 + i32)).getMaterial();
+						Material material12 = world.getBlockState(new BlockPos(x + i8, y + i10, z + i32)).getMaterial();
 						if(i10 >= 4 && material12.isLiquid()) {
 							return false;
 						}
 
-						if(i10 < 4 && !material12.isSolid() && world.getBlockState(new BlockPos(i3 + i8, i4 + i10, i5 + i32)).getBlock() != this.state.getBlock()) {
+						if(i10 < 4 && !material12.isSolid() && world.getBlockState(new BlockPos(x + i8, y + i10, z + i32)).getBlock() != this.state.getBlock()) {
 							return false;
 						}
 					}
@@ -76,7 +76,7 @@ public class WorldGenLakes extends WorldGenerator {
 			for(i32 = 0; i32 < 16; ++i32) {
 				for(i10 = 0; i10 < 8; ++i10) {
 					if(z6[(i8 * 16 + i32) * 8 + i10]) {
-						world.setBlockState(new BlockPos(i3 + i8, i4 + i10, i5 + i32), i10 >= 4 ? Blocks.AIR.getDefaultState() : this.state, Block.NOTIFY_LISTENERS);
+						world.setBlockState(new BlockPos(x + i8, y + i10, z + i32), i10 >= 4 ? Blocks.AIR.getDefaultState() : this.state, Block.NOTIFY_LISTENERS);
 					}
 				}
 			}
@@ -85,8 +85,8 @@ public class WorldGenLakes extends WorldGenerator {
 		for(i8 = 0; i8 < 16; ++i8) {
 			for(i32 = 0; i32 < 16; ++i32) {
 				for(i10 = 4; i10 < 8; ++i10) {
-					if(z6[(i8 * 16 + i32) * 8 + i10] && world.getBlockState(new BlockPos(i3 + i8, i4 + i10 - 1, i5 + i32)).isOf(Blocks.DIRT) && world.getLightLevel(LightType.SKY, new BlockPos(i3 + i8, i4 + i10, i5 + i32)) > 0) {
-						world.setBlockState(new BlockPos(i3 + i8, i4 + i10 - 1, i5 + i32), Blocks.GRASS_BLOCK.getDefaultState(), Block.NOTIFY_LISTENERS);
+					if(z6[(i8 * 16 + i32) * 8 + i10] && world.getBlockState(new BlockPos(x + i8, y + i10 - 1, z + i32)).isOf(Blocks.DIRT) && world.getLightLevel(LightType.SKY, new BlockPos(x + i8, y + i10, z + i32)) > 0) {
+						world.setBlockState(new BlockPos(x + i8, y + i10 - 1, z + i32), Blocks.GRASS_BLOCK.getDefaultState(), Block.NOTIFY_LISTENERS);
 					}
 				}
 			}
@@ -97,8 +97,8 @@ public class WorldGenLakes extends WorldGenerator {
 				for(i32 = 0; i32 < 16; ++i32) {
 					for(i10 = 0; i10 < 8; ++i10) {
 						z33 = !z6[(i8 * 16 + i32) * 8 + i10] && (i8 < 15 && z6[((i8 + 1) * 16 + i32) * 8 + i10] || i8 > 0 && z6[((i8 - 1) * 16 + i32) * 8 + i10] || i32 < 15 && z6[(i8 * 16 + i32 + 1) * 8 + i10] || i32 > 0 && z6[(i8 * 16 + (i32 - 1)) * 8 + i10] || i10 < 7 && z6[(i8 * 16 + i32) * 8 + i10 + 1] || i10 > 0 && z6[(i8 * 16 + i32) * 8 + (i10 - 1)]);
-						if(z33 && (i10 < 4 || random.nextInt(2) != 0) && world.getBlockState(new BlockPos(i3 + i8, i4 + i10, i5 + i32)).getMaterial().isSolid()) {
-							world.setBlockState(new BlockPos(i3 + i8, i4 + i10, i5 + i32), Blocks.STONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+						if(z33 && (i10 < 4 || random.nextInt(2) != 0) && world.getBlockState(new BlockPos(x + i8, y + i10, z + i32)).getMaterial().isSolid()) {
+							world.setBlockState(new BlockPos(x + i8, y + i10, z + i32), Blocks.STONE.getDefaultState(), Block.NOTIFY_LISTENERS);
 						}
 					}
 				}

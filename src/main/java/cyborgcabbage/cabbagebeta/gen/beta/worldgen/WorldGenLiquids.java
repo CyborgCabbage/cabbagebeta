@@ -15,50 +15,50 @@ public class WorldGenLiquids extends WorldGenerator {
 		this.state = i1;
 	}
 
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
-		if(!world.getBlockState(new BlockPos(i3, i4 + 1, i5)).isOf(Blocks.STONE)) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
+		if(!world.getBlockState(new BlockPos(x, y + 1, z)).isOf(Blocks.STONE)) {
 			return false;
-		} else if(!world.getBlockState(new BlockPos(i3, i4 - 1, i5)).isOf(Blocks.STONE)) {
+		} else if(!world.getBlockState(new BlockPos(x, y - 1, z)).isOf(Blocks.STONE)) {
 			return false;
-		} else if(!world.getBlockState(new BlockPos(i3, i4, i5)).isAir() && !world.getBlockState(new BlockPos(i3, i4, i5)).isOf(Blocks.STONE)) {
+		} else if(!world.getBlockState(new BlockPos(x, y, z)).isAir() && !world.getBlockState(new BlockPos(x, y, z)).isOf(Blocks.STONE)) {
 			return false;
 		} else {
 			int i6 = 0;
-			if(world.getBlockState(new BlockPos(i3 - 1, i4, i5)).isOf(Blocks.STONE)) {
+			if(world.getBlockState(new BlockPos(x - 1, y, z)).isOf(Blocks.STONE)) {
 				++i6;
 			}
 
-			if(world.getBlockState(new BlockPos(i3 + 1, i4, i5)).isOf(Blocks.STONE)) {
+			if(world.getBlockState(new BlockPos(x + 1, y, z)).isOf(Blocks.STONE)) {
 				++i6;
 			}
 
-			if(world.getBlockState(new BlockPos(i3, i4, i5 - 1)).isOf(Blocks.STONE)) {
+			if(world.getBlockState(new BlockPos(x, y, z - 1)).isOf(Blocks.STONE)) {
 				++i6;
 			}
 
-			if(world.getBlockState(new BlockPos(i3, i4, i5 + 1)).isOf(Blocks.STONE)) {
+			if(world.getBlockState(new BlockPos(x, y, z + 1)).isOf(Blocks.STONE)) {
 				++i6;
 			}
 
 			int i7 = 0;
-			if(world.isAir(new BlockPos(i3 - 1, i4, i5))) {
+			if(world.isAir(new BlockPos(x - 1, y, z))) {
 				++i7;
 			}
 
-			if(world.isAir(new BlockPos(i3 + 1, i4, i5))) {
+			if(world.isAir(new BlockPos(x + 1, y, z))) {
 				++i7;
 			}
 
-			if(world.isAir(new BlockPos(i3, i4, i5 - 1))) {
+			if(world.isAir(new BlockPos(x, y, z - 1))) {
 				++i7;
 			}
 
-			if(world.isAir(new BlockPos(i3, i4, i5 + 1))) {
+			if(world.isAir(new BlockPos(x, y, z + 1))) {
 				++i7;
 			}
 
 			if(i6 == 3 && i7 == 1) {
-				BlockPos pos = new BlockPos(i3, i4, i5);
+				BlockPos pos = new BlockPos(x, y, z);
 				world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
 				world.createAndScheduleFluidTick(pos, state.getFluidState().getFluid(), 1);
 				//world.scheduledUpdatesAreImmediate = true;

@@ -9,18 +9,18 @@ import net.minecraft.world.StructureWorldAccess;
 import java.util.Random;
 
 public class WorldGenGlowStone2 extends WorldGenerator {
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
-		if(!world.isAir(new BlockPos(i3, i4, i5))) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
+		if(!world.isAir(new BlockPos(x, y, z))) {
 			return false;
-		} else if(!world.getBlockState(new BlockPos(i3, i4 + 1, i5)).isOf(Blocks.NETHERRACK)) {
+		} else if(!world.getBlockState(new BlockPos(x, y + 1, z)).isOf(Blocks.NETHERRACK)) {
 			return false;
 		} else {
-			world.setBlockState(new BlockPos(i3, i4, i5), Blocks.GLOWSTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+			world.setBlockState(new BlockPos(x, y, z), Blocks.GLOWSTONE.getDefaultState(), Block.NOTIFY_LISTENERS);
 
 			for(int i6 = 0; i6 < 1500; ++i6) {
-				int i7 = i3 + random.nextInt(8) - random.nextInt(8);
-				int i8 = i4 - random.nextInt(12);
-				int i9 = i5 + random.nextInt(8) - random.nextInt(8);
+				int i7 = x + random.nextInt(8) - random.nextInt(8);
+				int i8 = y - random.nextInt(12);
+				int i9 = z + random.nextInt(8) - random.nextInt(8);
 				if(world.getBlockState(new BlockPos(i7, i8, i9)).isAir()) {
 					int i10 = 0;
 

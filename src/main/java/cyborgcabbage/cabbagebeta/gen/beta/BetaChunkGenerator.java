@@ -2,6 +2,7 @@ package cyborgcabbage.cabbagebeta.gen.beta;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import cyborgcabbage.cabbagebeta.gen.BetaProperties;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.structure.StructureSet;
@@ -28,8 +29,19 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-public class BetaChunkGenerator extends ChunkGenerator {
-    public static final Codec<BetaChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> BetaChunkGenerator.createStructureSetRegistryGetter(instance).and(instance.group(RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry), Codec.STRING.fieldOf("mode").orElse("").forGetter(BetaChunkGenerator::getMode))).apply(instance, instance.stable(BetaChunkGenerator::new)));
+public class BetaChunkGenerator extends ChunkGenerator implements BetaProperties {
+    public static final Codec<BetaChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            RegistryOps.createRegistryCodec(Registry.STRUCTURE_SET_KEY).forGetter(chunkGenerator -> chunkGenerator.structureSetRegistry),
+            RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry),
+            Codec.STRING.fieldOf("dimension_mode").orElse("").forGetter(BetaChunkGenerator::getDimensionMode),
+            Codec.BOOL.fieldOf("use_full_height").orElse(false).forGetter(BetaChunkGenerator::getUseFullHeight),
+            Codec.INT.fieldOf("sea_level").orElse(64).forGetter(BetaChunkGenerator::getSeaLevel),
+            Codec.FLOAT.fieldOf("factor").orElse(12.0f).forGetter(BetaChunkGenerator::getFactor),
+            Codec.INT.fieldOf("ground_level").orElse(68).forGetter(BetaChunkGenerator::getGroundLevel),
+            Codec.INT.fieldOf("cave_lava_level").orElse(10).forGetter(BetaChunkGenerator::getCaveLavaLevel),
+            Codec.FLOAT.fieldOf("mixing").orElse(1.0f).forGetter(BetaChunkGenerator::getMixing),
+            Codec.BOOL.fieldOf("fixes").orElse(false).forGetter(BetaChunkGenerator::getFixes)
+    ).apply(instance, instance.stable(BetaChunkGenerator::new)));
     private final Registry<Biome> biomeRegistry;
     //Content Creators
     private final BetaSeed SEED_YOGSCAST = new BetaSeed(4090136037452000329L);
@@ -39,9 +51,9 @@ public class BetaChunkGenerator extends ChunkGenerator {
     private final BetaSeed SEED_PACK_PNG = new BetaSeed(3257840388504953787L);//Population differences
     private final BetaSeed SEED_PANORAMA = new BetaSeed(2151901553968352745L);
 
-    private String mode = "";
-    public String getMode() {
-        return mode;
+    private String dimensionMode = "";
+    public String getDimensionMode() {
+        return dimensionMode;
     }
 
 
@@ -57,7 +69,7 @@ public class BetaChunkGenerator extends ChunkGenerator {
     }
 
     //minecraftseeds.info (internet archive)
-    private final String[] SEED_ARRAY = {
+    /*private final String[] SEED_ARRAY = {
         "177907495",
         "1385327417",
         "MODDED",
@@ -113,19 +125,84 @@ public class BetaChunkGenerator extends ChunkGenerator {
         "-1784338777788894343",
         "Glacier",
         "404"
-    };
+    };*/
 
     protected BetaChunkProvider generator;
 
-    public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, String mode) {
+    private final boolean useFullHeight;
+    private final int seaLevel;
+    private final float factor;
+    private final int groundLevel;
+    private final int caveLavaLevel;
+    private final float mixing;
+    private final boolean fixes;
+
+    /*
+    Variables:
+    Use Full Height
+    Sea Level
+    Factor
+    Ground Level
+    Cave Lava Level
+    Mixing
+    Fixes
+
+    Faithful:
+    No
+    64
+    12.0
+    68
+    10
+    ?
+    No
+
+
+    */
+
+    public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, String dimensionMode, boolean useFullHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes) {
         super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry));
         this.biomeRegistry = biomeRegistry;
-        this.mode = mode;
-        generator = Objects.equals(mode, "nether") ? new ChunkProviderHell() : new ChunkProviderGenerate();
+        this.dimensionMode = dimensionMode;
+        this.useFullHeight = useFullHeight;
+        this.seaLevel = seaLevel;
+        this.factor = factor;
+        this.groundLevel = groundLevel;
+        this.caveLavaLevel = caveLavaLevel;
+        this.mixing = mixing;
+        this.fixes = fixes;
+        generator = Objects.equals(this.dimensionMode, "nether") ? new ChunkProviderHell() : new ChunkProviderGenerate(useFullHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes);
         if(biomeSource instanceof BetaOverworldBiomeSource bobs){
             bobs.setGenerator(generator);
         }
+    }
 
+    public boolean getUseFullHeight() {
+        return useFullHeight;
+    }
+
+    @Override
+    public int getSeaLevel() {
+        return seaLevel;
+    }
+
+    public float getFactor() {
+        return factor;
+    }
+
+    public int getGroundLevel() {
+        return groundLevel;
+    }
+
+    public int getCaveLavaLevel() {
+        return caveLavaLevel;
+    }
+
+    public float getMixing() {
+        return mixing;
+    }
+
+    public boolean getFixes() {
+        return fixes;
     }
 
     public Registry<Biome> getBiomeRegistry() {
@@ -173,11 +250,6 @@ public class BetaChunkGenerator extends ChunkGenerator {
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         generator.fillChunk(chunk, noiseConfig.getLegacyWorldSeed());
         return CompletableFuture.completedFuture(chunk);
-    }
-
-    @Override
-    public int getSeaLevel() {
-        return 0;
     }
 
     @Override

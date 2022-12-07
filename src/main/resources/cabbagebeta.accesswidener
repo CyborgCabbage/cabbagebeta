@@ -1,2 +1,5 @@
 accessWidener	v2	named
-transitive-accessible	method	net/minecraft/world/biome/OverworldBiomeCreator getSkyColor (F)I
+accessible	method	net/minecraft/world/biome/OverworldBiomeCreator getSkyColor (F)I
+accessible	method	net/minecraft/client/gui/screen/world/MoreOptionsDialog apply (Lnet/minecraft/client/world/GeneratorOptionsHolder$Modifier;)V
+accessible	method	net/minecraft/client/gui/screen/world/MoreOptionsDialog apply (Lnet/minecraft/client/world/GeneratorOptionsHolder$RegistryAwareModifier;)V
+accessible field net/minecraft/client/gui/screen/world/LevelScreenProvider WORLD_PRESET_TO_SCREEN_PROVIDER Ljava/util/Map;

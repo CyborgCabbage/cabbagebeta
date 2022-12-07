@@ -334,13 +334,13 @@ public class WorldGenBigTree extends WorldGenerator {
 		this.field_872_k = d5;
 	}
 
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
 		this.worldObj = world;
 		long j6 = random.nextLong();
 		this.field_881_b.setSeed(j6);
-		this.basePos[0] = i3;
-		this.basePos[1] = i4;
-		this.basePos[2] = i5;
+		this.basePos[0] = x;
+		this.basePos[1] = y;
+		this.basePos[2] = z;
 		if(this.field_878_e == 0) {
 			this.field_878_e = 5 + this.field_881_b.nextInt(this.field_870_m);
 		}

@@ -9,6 +9,11 @@ import net.minecraft.world.chunk.Chunk;
 import java.util.Random;
 
 public class MapGenCaves extends MapGenBase {
+	int lavaLevel;
+	public MapGenCaves(int lavaLevel) {
+		this.lavaLevel = lavaLevel;
+	}
+
 	protected void caveSegment(int chunkX, int chunkZ, Chunk chunk, double blockX, double blockY, double blockZ) {
 		this.caveSegment(chunkX, chunkZ, chunk, blockX, blockY, blockZ, 1.0F + this.rand.nextFloat() * 6.0F, 0.0F, 0.0F, -1, -1, 0.5D);
 	}
@@ -135,7 +140,7 @@ public class MapGenCaves extends MapGenBase {
 											}
 
 											if(b51.isOf(Blocks.STONE) || b51.isOf(Blocks.DIRT) || b51.isOf(Blocks.GRASS_BLOCK)) {
-												if(i48 < 10) {
+												if(i48 < lavaLevel) {
 													chunk.setBlockState(i46, Blocks.LAVA.getDefaultState(), false);
 												} else {
 													chunk.setBlockState(i46, Blocks.AIR.getDefaultState(), false);

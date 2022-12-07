@@ -18,14 +18,14 @@ public class WorldGenMinable extends WorldGenerator {
 		this.numberOfBlocks = i2;
 	}
 
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
 		float f6 = random.nextFloat() * (float)Math.PI;
-		double d7 = (double)((float)(i3 + 8) + MathHelper.sin(f6) * (float)this.numberOfBlocks / 8.0F);
-		double d9 = (double)((float)(i3 + 8) - MathHelper.sin(f6) * (float)this.numberOfBlocks / 8.0F);
-		double d11 = (double)((float)(i5 + 8) + MathHelper.cos(f6) * (float)this.numberOfBlocks / 8.0F);
-		double d13 = (double)((float)(i5 + 8) - MathHelper.cos(f6) * (float)this.numberOfBlocks / 8.0F);
-		double d15 = (double)(i4 + random.nextInt(3) + 2);
-		double d17 = (double)(i4 + random.nextInt(3) + 2);
+		double d7 = (double)((float)(x + 8) + MathHelper.sin(f6) * (float)this.numberOfBlocks / 8.0F);
+		double d9 = (double)((float)(x + 8) - MathHelper.sin(f6) * (float)this.numberOfBlocks / 8.0F);
+		double d11 = (double)((float)(z + 8) + MathHelper.cos(f6) * (float)this.numberOfBlocks / 8.0F);
+		double d13 = (double)((float)(z + 8) - MathHelper.cos(f6) * (float)this.numberOfBlocks / 8.0F);
+		double d15 = (double)(y + random.nextInt(3) + 2);
+		double d17 = (double)(y + random.nextInt(3) + 2);
 
 		for(int i19 = 0; i19 <= this.numberOfBlocks; ++i19) {
 			double d20 = d7 + (d9 - d7) * (double)i19 / (double)this.numberOfBlocks;

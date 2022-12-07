@@ -11,8 +11,8 @@ import net.minecraft.world.biome.SpawnSettings;
 import java.util.Random;
 
 public class BiomeGenForest extends BiomeGenBase {
-	public WorldGenerator getRandomWorldGenForTrees(Random random1) {
-		return random1.nextInt(5) == 0 ? new WorldGenForest() : (random1.nextInt(3) == 0 ? new WorldGenBigTree() : new WorldGenTrees());
+	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
+		return random1.nextInt(5) == 0 ? new WorldGenForest(height) : (random1.nextInt(3) == 0 ? new WorldGenBigTree() : new WorldGenTrees(height));
 	}
 
 	@Override

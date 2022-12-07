@@ -8,11 +8,11 @@ import net.minecraft.world.StructureWorldAccess;
 import java.util.Random;
 
 public class WorldGenCactus extends WorldGenerator {
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
 		for(int i6 = 0; i6 < 10; ++i6) {
-			int i7 = i3 + random.nextInt(8) - random.nextInt(8);
-			int i8 = i4 + random.nextInt(4) - random.nextInt(4);
-			int i9 = i5 + random.nextInt(8) - random.nextInt(8);
+			int i7 = x + random.nextInt(8) - random.nextInt(8);
+			int i8 = y + random.nextInt(4) - random.nextInt(4);
+			int i9 = z + random.nextInt(8) - random.nextInt(8);
 			if(world.isAir(new BlockPos(i7, i8, i9))) {
 				int height = 1 + random.nextInt(random.nextInt(3) + 1);
 

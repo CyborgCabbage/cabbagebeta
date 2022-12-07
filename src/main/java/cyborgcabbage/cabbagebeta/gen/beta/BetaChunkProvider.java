@@ -9,8 +9,6 @@ import java.util.Random;
 public abstract class BetaChunkProvider {
     protected Random rand;
     long worldSeed;
-    public BetaChunkProvider() {
-    }
     protected void init(long seed){
         rand = new Random(seed);
         worldSeed = seed;

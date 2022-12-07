@@ -9,16 +9,16 @@ import net.minecraft.world.StructureWorldAccess;
 import java.util.Random;
 
 public class WorldGenReed extends WorldGenerator {
-	public boolean generate(StructureWorldAccess world, Random random, int i3, int i4, int i5) {
+	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
 		for(int i6 = 0; i6 < 20; ++i6) {
-			int i7 = i3 + random.nextInt(4) - random.nextInt(4);
-			int i8 = i4;
-			int i9 = i5 + random.nextInt(4) - random.nextInt(4);
-			if(world.isAir(new BlockPos(i7, i4, i9)) && (
-					world.getBlockState(new BlockPos(i7 - 1, i4 - 1, i9)).getMaterial() == Material.WATER ||
-					world.getBlockState(new BlockPos(i7 + 1, i4 - 1, i9)).getMaterial() == Material.WATER ||
-					world.getBlockState(new BlockPos(i7, i4 - 1, i9 - 1)).getMaterial() == Material.WATER ||
-					world.getBlockState(new BlockPos(i7, i4 - 1, i9 + 1)).getMaterial() == Material.WATER)) {
+			int i7 = x + random.nextInt(4) - random.nextInt(4);
+			int i8 = y;
+			int i9 = z + random.nextInt(4) - random.nextInt(4);
+			if(world.isAir(new BlockPos(i7, y, i9)) && (
+					world.getBlockState(new BlockPos(i7 - 1, y - 1, i9)).getMaterial() == Material.WATER ||
+					world.getBlockState(new BlockPos(i7 + 1, y - 1, i9)).getMaterial() == Material.WATER ||
+					world.getBlockState(new BlockPos(i7, y - 1, i9 - 1)).getMaterial() == Material.WATER ||
+					world.getBlockState(new BlockPos(i7, y - 1, i9 + 1)).getMaterial() == Material.WATER)) {
 				int i10 = 2 + random.nextInt(random.nextInt(3) + 1);
 
 				for(int i11 = 0; i11 < i10; ++i11) {
