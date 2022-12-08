@@ -65,7 +65,6 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         });*/
         this.prop = properties;
         this.caveGen = new MapGenCaves(properties.caveLavaLevel());
-
     }
 
     protected void init(long seed) {
@@ -89,49 +88,43 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         int xNoiseSize = horizontalNoiseSize + 1;
         int yNoiseSize = getHeight()/8+1;
         int zNoiseSize = horizontalNoiseSize + 1;
+        long noiseStart = System.nanoTime();
         this.terrainNoiseValues = this.generateTerrainNoise(this.terrainNoiseValues, pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize);
+        long interpStart = System.nanoTime();
         BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
         for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
             for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
                 for(int yNoiseIndex = 0; yNoiseIndex < getHeight()/8; ++yNoiseIndex) {
-                    double yFrac = 0.125D;
                     double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
                     double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
                     double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
                     double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * yFrac;
-                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * yFrac;
-                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * yFrac;
-                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * yFrac;
-
+                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * 0.125D;
+                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * 0.125D;
+                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * 0.125D;
+                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * 0.125D;
                     for(int ySub = 0; ySub < 8; ++ySub) {
                         blockPos.setY(yNoiseIndex * 8 + ySub);
-                        double xFrac = 0.25D;
                         double d35 = v000;
                         double d37 = v010;
-                        double d39 = (v100 - v000) * xFrac;
-                        double d41 = (v110 - v010) * xFrac;
-
+                        double d39 = (v100 - v000) * 0.25D;
+                        double d41 = (v110 - v010) * 0.25D;
                         for(int xSub = 0; xSub < 4; ++xSub) {
                             blockPos.setX(xNoiseIndex * 4 + xSub);
-                            double zFrac = 0.25D;
                             double density = d35;
-                            double zNoiseStep = (d37 - d35) * zFrac;
-
+                            double zNoiseStep = (d37 - d35) * 0.25D;
                             for(int zSub = 0; zSub < 4; ++zSub) {
                                 blockPos.setZ(zNoiseIndex * 4 + zSub);
-                                double d53 = terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub];
                                 Block blockState = Blocks.AIR;
-                                if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
-                                    if(d53 < 0.5D && yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
-                                        blockState = Blocks.ICE;
-                                    } else {
-                                        blockState = Blocks.WATER;
-                                    }
-                                }
-
                                 if(density > 0.0D) {
                                     blockState = Blocks.STONE;
+                                }else if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
+                                    blockState = Blocks.WATER;
+                                    if(yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
+                                        if(terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub] < 0.5D){
+                                            blockState = Blocks.ICE;
+                                        }
+                                    }
                                 }
                                 chunk.setBlockState(blockPos, blockState.getDefaultState(), false);
                                 density += zNoiseStep;
@@ -147,7 +140,8 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 }
             }
         }
-
+        BetaChunkGenerator.Timers.terrainInterpolate += System.nanoTime() - interpStart;
+        BetaChunkGenerator.Timers.terrainNoise += interpStart - noiseStart;
     }
 
     public void replaceBlocksForBiome(Chunk chunk, BiomeGenBase[] biomeGenBase4) {
@@ -232,10 +226,22 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     public void fillChunk(Chunk chunk) {
         var pos = chunk.getPos();
         this.rand.setSeed((long) pos.x * 341873128712L + (long) pos.z * 132897987541L);
+        long biomeStart = System.nanoTime();
         this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
+        long terrainStart = System.nanoTime();
         this.generateTerrain(chunk);
+        long surfaceStart = System.nanoTime();
         this.replaceBlocksForBiome(chunk, this.terrainBiomes.biomes);
+        long caveStart = System.nanoTime();
         this.caveGen.generate(chunk, worldSeed);
+        BetaChunkGenerator.Timers.cave += System.nanoTime() - caveStart;
+        BetaChunkGenerator.Timers.surface += caveStart - surfaceStart;
+        BetaChunkGenerator.Timers.terrain += surfaceStart - terrainStart;
+        BetaChunkGenerator.Timers.biomes += terrainStart - biomeStart;
+        BetaChunkGenerator.Timers.fillCount++;
+        if(BetaChunkGenerator.Timers.fillCount == 1000){
+            BetaChunkGenerator.Timers.printFill();
+        }
     }
 
     private double[] generateTerrainNoise(double[] noiseArray, int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize) {
@@ -351,6 +357,7 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     }
     @Override
     public void populate(StructureWorldAccess world, Chunk chunk) {
+        long startPopulate = System.nanoTime();
         //BlockSand.fallInstantly = true;
         int i2 = chunk.getPos().x;
         int i3 = chunk.getPos().z;
@@ -443,7 +450,11 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 }
             }
         }
-
+        BetaChunkGenerator.Timers.populate += System.nanoTime() - startPopulate;
+        BetaChunkGenerator.Timers.populateCount++;
+        if(BetaChunkGenerator.Timers.populateCount == 1000){
+            BetaChunkGenerator.Timers.printPopulation();
+        }
         //BlockSand.fallInstantly = false;
     }
 

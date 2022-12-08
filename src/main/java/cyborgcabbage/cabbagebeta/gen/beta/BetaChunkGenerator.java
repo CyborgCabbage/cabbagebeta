@@ -2,6 +2,7 @@ package cyborgcabbage.cabbagebeta.gen.beta;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.BetaProperties;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -225,5 +226,29 @@ public class BetaChunkGenerator extends ChunkGenerator {
 
     @Override
     public void getDebugHudText(List<String> text, NoiseConfig noiseConfig, BlockPos pos) {
+    }
+
+    public static class Timers{
+        public static long fillCount = 0;
+        public static long biomes = 0;
+        public static long terrain = 0;
+        public static long surface = 0;
+        public static long cave = 0;
+        public static long populateCount = 0;
+        public static long populate = 0;
+        public static long terrainNoise = 0;
+        public static long terrainInterpolate = 0;
+        public static void printFill(){
+            CabbageBeta.LOGGER.info("terrainNoise: "+terrainNoise);
+            CabbageBeta.LOGGER.info("terrainInterpolate: "+terrainInterpolate);
+            CabbageBeta.LOGGER.info("biomes: "+biomes);
+            CabbageBeta.LOGGER.info("terrain: "+terrain);
+            CabbageBeta.LOGGER.info("surface: "+surface);
+            CabbageBeta.LOGGER.info("cave: "+cave);
+
+        }
+        public static void printPopulation(){
+            CabbageBeta.LOGGER.info("populate: "+populate);
+        }
     }
 }
