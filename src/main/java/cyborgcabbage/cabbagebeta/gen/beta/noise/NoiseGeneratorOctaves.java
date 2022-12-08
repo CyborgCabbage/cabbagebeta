@@ -29,24 +29,24 @@ public class NoiseGeneratorOctaves {
         return d5;
     }
 
-    public double[] generateNoiseOctaves(double[] output, double xOffset, double yOffset, double zOffset, int xSize, int ySize, int zSize, double xScale, double yScale, double zScale) {
+    public float[] generateNoiseOctaves(float[] output, double xOffset, double yOffset, double zOffset, int xSize, int ySize, int zSize, double xScale, double yScale, double zScale) {
         if(output == null) {
-            output = new double[xSize * ySize * zSize];
+            output = new float[xSize * ySize * zSize];
         } else {
-            Arrays.fill(output, 0.0D);
+            Arrays.fill(output, 0.f);
         }
 
-        double inverseMagnitude = 1.0D;
+        float inverseMagnitude = 1.f;
 
         for(int l = 0; l < this.layers; ++l) {
             this.generatorCollection[l].func_805_a(output, xOffset, yOffset, zOffset, xSize, ySize, zSize, xScale * inverseMagnitude, yScale * inverseMagnitude, zScale * inverseMagnitude, inverseMagnitude);
-            inverseMagnitude /= 2.0D;
+            inverseMagnitude /= 2.f;
         }
 
         return output;
     }
 
-    public double[] func_4109_a(double[] d1, int i2, int i3, int i4, int i5, double d6, double d8, double d10) {
+    public float[] func_4109_a(float[] d1, int i2, int i3, int i4, int i5, double d6, double d8, double d10) {
         return this.generateNoiseOctaves(d1, (double)i2, 10.0D, (double)i3, i4, 1, i5, d6, 1.0D, d8);
     }
 }

@@ -1,5 +1,6 @@
 package cyborgcabbage.cabbagebeta.gen.beta.noise;
 
+import java.util.Arrays;
 import java.util.Random;
 
 public class NoiseGeneratorOctaves2 {
@@ -16,31 +17,29 @@ public class NoiseGeneratorOctaves2 {
 
     }
 
-    public double[] func_4112_a(double[] d1, double d2, double d4, int i6, int i7, double d8, double d10, double d12) {
-        return this.func_4111_a(d1, d2, d4, i6, i7, d8, d10, d12, 0.5D);
+    public float[] sample(float[] output, double xOffset, double yOffset, int xSize, int ySize, double xScale, double yScale, double scaleFactor) {
+        return this.sample(output, xOffset, yOffset, xSize, ySize, xScale, yScale, scaleFactor, 0.5f);
     }
 
-    public double[] func_4111_a(double[] d1, double d2, double d4, int i6, int i7, double d8, double d10, double d12, double d14) {
-        d8 /= 1.5D;
-        d10 /= 1.5D;
-        if(d1 != null && d1.length >= i6 * i7) {
-            for(int i16 = 0; i16 < d1.length; ++i16) {
-                d1[i16] = 0.0D;
-            }
+    public float[] sample(float[] output, double xOffset, double yOffset, int xSize, int ySize, double xScale, double yScale, double scaleFactor, float magnitudeFactor) {
+        xScale /= 1.5D;
+        yScale /= 1.5D;
+        if(output != null && output.length >= xSize * ySize) {
+            Arrays.fill(output, 0.f);
         } else {
-            d1 = new double[i6 * i7];
+            output = new float[xSize * ySize];
         }
 
-        double d21 = 1.0D;
-        double d18 = 1.0D;
+        float accumulateMagnitude = 1.f;
+        double accumulateScale = 1.0D;
 
         for(int i20 = 0; i20 < this.field_4233_b; ++i20) {
-            this.field_4234_a[i20].func_4157_a(d1, d2, d4, i6, i7, d8 * d18, d10 * d18, 0.55D / d21);
-            d18 *= d12;
-            d21 *= d14;
+            this.field_4234_a[i20].func_4157_a(output, xOffset, yOffset, xSize, ySize, xScale * accumulateScale, yScale * accumulateScale, 0.55f / accumulateMagnitude);
+            accumulateScale *= scaleFactor;
+            accumulateMagnitude *= magnitudeFactor;
         }
 
-        return d1;
+        return output;
     }
 }
 

@@ -20,16 +20,16 @@ public class ChunkProviderHell extends BetaChunkProvider {
     private NoiseGeneratorOctaves field_4165_m;
     public NoiseGeneratorOctaves field_4177_a;
     public NoiseGeneratorOctaves field_4176_b;
-    private double[] field_4163_o;
-    private double[] field_4162_p = new double[256];
-    private double[] field_4161_q = new double[256];
-    private double[] field_4160_r = new double[256];
+    private float[] field_4163_o;
+    private float[] field_4162_p = new float[256];
+    private float[] field_4161_q = new float[256];
+    private float[] field_4160_r = new float[256];
     private final MapGenBase caveGen = new MapGenCavesHell();
-    double[] field_4175_c;
-    double[] field_4174_d;
-    double[] field_4173_e;
-    double[] field_4172_f;
-    double[] field_4171_g;
+    float[] field_4175_c;
+    float[] field_4174_d;
+    float[] field_4173_e;
+    float[] field_4172_f;
+    float[] field_4171_g;
 
     public ChunkProviderHell() {
 
@@ -60,29 +60,29 @@ public class ChunkProviderHell extends BetaChunkProvider {
         for(int xi = 0; xi < horizontalSize; ++xi) {
             for(int zi = 0; zi < horizontalSize; ++zi) {
                 for(int yi = 0; yi < 16; ++yi) {
-                    double d12 = 0.125D;
-                    double d000 = this.field_4163_o[((xi + 0) * zSize + zi + 0) * ySize + yi + 0];
-                    double d010 = this.field_4163_o[((xi + 0) * zSize + zi + 1) * ySize + yi + 0];
-                    double d100 = this.field_4163_o[((xi + 1) * zSize + zi + 0) * ySize + yi + 0];
-                    double d110 = this.field_4163_o[((xi + 1) * zSize + zi + 1) * ySize + yi + 0];
-                    double d001 = (this.field_4163_o[((xi + 0) * zSize + zi + 0) * ySize + yi + 1] - d000) * d12;
-                    double d011 = (this.field_4163_o[((xi + 0) * zSize + zi + 1) * ySize + yi + 1] - d010) * d12;
-                    double d101 = (this.field_4163_o[((xi + 1) * zSize + zi + 0) * ySize + yi + 1] - d100) * d12;
-                    double d111 = (this.field_4163_o[((xi + 1) * zSize + zi + 1) * ySize + yi + 1] - d110) * d12;
+                    float d12 = 0.125f;
+                    float d000 = this.field_4163_o[((xi + 0) * zSize + zi + 0) * ySize + yi + 0];
+                    float d010 = this.field_4163_o[((xi + 0) * zSize + zi + 1) * ySize + yi + 0];
+                    float d100 = this.field_4163_o[((xi + 1) * zSize + zi + 0) * ySize + yi + 0];
+                    float d110 = this.field_4163_o[((xi + 1) * zSize + zi + 1) * ySize + yi + 0];
+                    float d001 = (this.field_4163_o[((xi + 0) * zSize + zi + 0) * ySize + yi + 1] - d000) * d12;
+                    float d011 = (this.field_4163_o[((xi + 0) * zSize + zi + 1) * ySize + yi + 1] - d010) * d12;
+                    float d101 = (this.field_4163_o[((xi + 1) * zSize + zi + 0) * ySize + yi + 1] - d100) * d12;
+                    float d111 = (this.field_4163_o[((xi + 1) * zSize + zi + 1) * ySize + yi + 1] - d110) * d12;
 
                     for(int i30 = 0; i30 < 8; ++i30) {
                         blockPos.setY(yi * 8 + i30);
-                        double d31 = 0.25D;
-                        double d33 = d000;
-                        double d35 = d010;
-                        double d37 = (d100 - d000) * d31;
-                        double d39 = (d110 - d010) * d31;
+                        float d31 = 0.25f;
+                        float d33 = d000;
+                        float d35 = d010;
+                        float d37 = (d100 - d000) * d31;
+                        float d39 = (d110 - d010) * d31;
 
                         for(int i41 = 0; i41 < 4; ++i41) {
                             blockPos.setX(i41 + xi * 4);
-                            double d44 = 0.25D;
-                            double d46 = d33;
-                            double d48 = (d35 - d33) * d44;
+                            float d44 = 0.25f;
+                            float d46 = d33;
+                            float d48 = (d35 - d33) * d44;
 
                             for(int i50 = 0; i50 < 4; ++i50) {
                                 blockPos.setZ(zi * 4 + i50);
@@ -91,7 +91,7 @@ public class ChunkProviderHell extends BetaChunkProvider {
                                     blockState = Blocks.LAVA.getDefaultState();
                                 }
 
-                                if(d46 > 0.0D) {
+                                if(d46 > 0.0f) {
                                     blockState = Blocks.NETHERRACK.getDefaultState();
                                 }
 
@@ -195,112 +195,64 @@ public class ChunkProviderHell extends BetaChunkProvider {
         this.caveGen.generate(chunk, worldSeed);
     }
 
-    private double[] generateTerrainNoise(double[] d1, int i2, int i3, int i4, int i5, int i6, int i7) {
-        if(d1 == null) {
-            d1 = new double[i5 * i6 * i7];
+    private float[] generateTerrainNoise(float[] output, int xOffset, int yOffset, int zOffset, int xSize, int ySize, int zSize) {
+        if(output == null) {
+            output = new float[xSize * ySize * zSize];
         }
 
         double d8 = 684.412D;
         double d10 = 2053.236D;
-        this.field_4172_f = this.field_4177_a.generateNoiseOctaves(this.field_4172_f, i2, i3, i4, i5, 1, i7, 1.0D, 0.0D, 1.0D);
-        this.field_4171_g = this.field_4176_b.generateNoiseOctaves(this.field_4171_g, i2, i3, i4, i5, 1, i7, 100.0D, 0.0D, 100.0D);
-        this.field_4175_c = this.field_4167_k.generateNoiseOctaves(this.field_4175_c, i2, i3, i4, i5, i6, i7, d8 / 80.0D, d10 / 60.0D, d8 / 80.0D);
-        this.field_4174_d = this.field_4169_i.generateNoiseOctaves(this.field_4174_d, i2, i3, i4, i5, i6, i7, d8, d10, d8);
-        this.field_4173_e = this.field_4168_j.generateNoiseOctaves(this.field_4173_e, i2, i3, i4, i5, i6, i7, d8, d10, d8);
-        int i12 = 0;
-        int i13 = 0;
-        double[] d14 = new double[i6];
+        this.field_4172_f = this.field_4177_a.generateNoiseOctaves(this.field_4172_f, xOffset, yOffset, zOffset, xSize, 1, zSize, 1.0D, 0.0D, 1.0D);
+        this.field_4171_g = this.field_4176_b.generateNoiseOctaves(this.field_4171_g, xOffset, yOffset, zOffset, xSize, 1, zSize, 100.0D, 0.0D, 100.0D);
+        this.field_4175_c = this.field_4167_k.generateNoiseOctaves(this.field_4175_c, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8 / 80.0D, d10 / 60.0D, d8 / 80.0D);
+        this.field_4174_d = this.field_4169_i.generateNoiseOctaves(this.field_4174_d, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8, d10, d8);
+        this.field_4173_e = this.field_4168_j.generateNoiseOctaves(this.field_4173_e, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8, d10, d8);
+        int i = 0;
+        float[] cosWave = new float[ySize];
 
-        int i15;
-        for(i15 = 0; i15 < i6; ++i15) {
-            d14[i15] = Math.cos((double)i15 * Math.PI * 6.0D / (double)i6) * 2.0D;
-            double d16 = i15;
-            if(i15 > i6 / 2) {
-                d16 = i6 - 1 - i15;
+        for(int yi = 0; yi < ySize; ++yi) {
+            cosWave[yi] = (float)Math.cos((double)yi * Math.PI * 6.0D / (double)ySize) * 2.f;
+            float d16 = yi;
+            if(yi > ySize / 2) {
+                d16 = ySize - 1 - yi;
             }
 
-            if(d16 < 4.0D) {
-                d16 = 4.0D - d16;
-                d14[i15] -= d16 * d16 * d16 * 10.0D;
+            if(d16 < 4.0f) {
+                d16 = 4.0f - d16;
+                cosWave[yi] -= d16 * d16 * d16 * 10.0f;
             }
         }
 
-        for(i15 = 0; i15 < i5; ++i15) {
-            for(int i36 = 0; i36 < i7; ++i36) {
-                double d17 = (this.field_4172_f[i13] + 256.0D) / 512.0D;
-                if(d17 > 1.0D) {
-                    d17 = 1.0D;
-                }
-
-                double d19 = 0.0D;
-                double d21 = this.field_4171_g[i13] / 8000.0D;
-                if(d21 < 0.0D) {
-                    d21 = -d21;
-                }
-
-                d21 = d21 * 3.0D - 3.0D;
-                if(d21 < 0.0D) {
-                    d21 /= 2.0D;
-                    if(d21 < -1.0D) {
-                        d21 = -1.0D;
-                    }
-
-                    d21 /= 1.4D;
-                    d21 /= 2.0D;
-                    d17 = 0.0D;
-                } else {
-                    if(d21 > 1.0D) {
-                        d21 = 1.0D;
-                    }
-
-                    d21 /= 6.0D;
-                }
-
-                d17 += 0.5D;
-                d21 = d21 * (double)i6 / 16.0D;
-                ++i13;
-
-                for(int i23 = 0; i23 < i6; ++i23) {
-                    double d24 = 0.0D;
-                    double d26 = d14[i23];
-                    double d28 = this.field_4174_d[i12] / 512.0D;
-                    double d30 = this.field_4173_e[i12] / 512.0D;
-                    double d32 = (this.field_4175_c[i12] / 10.0D + 1.0D) / 2.0D;
-                    if(d32 < 0.0D) {
+        for(int xi = 0; xi < xSize; ++xi) {
+            for(int zi = 0; zi < zSize; ++zi) {
+                for(int yi = 0; yi < ySize; ++yi) {
+                    float d26 = cosWave[yi];
+                    float d28 = this.field_4174_d[i] / 512.f;
+                    float d30 = this.field_4173_e[i] / 512.f;
+                    float d32 = (this.field_4175_c[i] / 10.f + 1.f) / 2.f;
+                    float d24;
+                    if(d32 < 0.f) {
                         d24 = d28;
-                    } else if(d32 > 1.0D) {
+                    } else if(d32 > 1.f) {
                         d24 = d30;
                     } else {
                         d24 = d28 + (d30 - d28) * d32;
                     }
 
                     d24 -= d26;
-                    double d34;
-                    if(i23 > i6 - 4) {
-                        d34 = (float)(i23 - (i6 - 4)) / 3.0F;
-                        d24 = d24 * (1.0D - d34) + -10.0D * d34;
+                    float d34;
+                    if(yi > ySize - 4) {
+                        d34 = (float)(yi - (ySize - 4)) / 3.0F;
+                        d24 = d24 * (1.0f - d34) + -10.0f * d34;
                     }
 
-                    if((double)i23 < d19) {
-                        d34 = (d19 - (double)i23) / 4.0D;
-                        if(d34 < 0.0D) {
-                            d34 = 0.0D;
-                        }
-
-                        if(d34 > 1.0D) {
-                            d34 = 1.0D;
-                        }
-
-                        d24 = d24 * (1.0D - d34) + -10.0D * d34;
-                    }
-
-                    d1[i12] = d24;
-                    ++i12;
+                    output[i] = d24;
+                    ++i;
                 }
             }
         }
 
-        return d1;
+        return output;
     }
 
     @Override

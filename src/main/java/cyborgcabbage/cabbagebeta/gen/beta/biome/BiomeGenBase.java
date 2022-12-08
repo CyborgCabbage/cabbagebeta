@@ -245,7 +245,7 @@ public class BiomeGenBase {
 		return this;
 	}
 
-	public static BiomeGenBase getBiomeFromLookup(double d0, double d2) {
+	public static BiomeGenBase getBiomeFromLookup(float d0, float d2) {
 		int i4 = (int)(d0 * 63.0D);
 		int i5 = (int)(d2 * 63.0D);
 		return biomeLookupTable[i4 + i5 * 64];

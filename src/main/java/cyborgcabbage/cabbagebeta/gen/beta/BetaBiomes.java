@@ -10,9 +10,9 @@ public class BetaBiomes {
     private final NoiseGeneratorOctaves2 temperatureGenerator;
     private final NoiseGeneratorOctaves2 humidityGenrator;
     private final NoiseGeneratorOctaves2 noise9;
-    public double[] temperature;
-    public double[] humidity;
-    public double[] biomeJitter;
+    public float[] temperature;
+    public float[] humidity;
+    public float[] biomeJitter;
     public BiomeGenBase[] biomeRegion;
     public BiomeGenBase[] biomes;
 
@@ -26,8 +26,8 @@ public class BetaBiomes {
         return this.getBiomesInRegion(x, z, 1, 1)[0];
     }
 
-    public double getTemperature(int i1, int i2) {
-        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, i1, i2, 1, 1, 0.02500000037252903d, 0.02500000037252903d, 0.5D);
+    public float getTemperature(int i1, int i2) {
+        this.temperature = this.temperatureGenerator.sample(this.temperature, i1, i2, 1, 1, 0.02500000037252903d, 0.02500000037252903d, 0.5D);
         return this.temperature[0];
     }
 
@@ -36,28 +36,28 @@ public class BetaBiomes {
         return this.biomeRegion;
     }
 
-    public double[] getTemperatures(double[] d1, int i2, int i3, int i4, int i5) {
+    public float[] getTemperatures(float[] d1, int i2, int i3, int i4, int i5) {
         if(d1 == null || d1.length < i4 * i5) {
-            d1 = new double[i4 * i5];
+            d1 = new float[i4 * i5];
         }
 
-        d1 = this.temperatureGenerator.func_4112_a(d1, i2, i3, i4, i5, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
-        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, i2, i3, i4, i5, 0.25D, 0.25D, 0.5882352941176471D);
+        d1 = this.temperatureGenerator.sample(d1, i2, i3, i4, i5, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
+        this.biomeJitter = this.noise9.sample(this.biomeJitter, i2, i3, i4, i5, 0.25D, 0.25D, 0.5882352941176471D);
         int i6 = 0;
 
         for(int i7 = 0; i7 < i4; ++i7) {
             for(int i8 = 0; i8 < i5; ++i8) {
-                double d9 = this.biomeJitter[i6] * 1.1D + 0.5D;
-                double d11 = 0.01D;
-                double d13 = 1.0D - d11;
-                double d15 = (d1[i6] * 0.15D + 0.7D) * d13 + d9 * d11;
-                d15 = 1.0D - (1.0D - d15) * (1.0D - d15);
-                if(d15 < 0.0D) {
-                    d15 = 0.0D;
+                float d9 = this.biomeJitter[i6] * 1.1f + 0.5f;
+                float d11 = 0.01f;
+                float d13 = 1.0f - d11;
+                float d15 = (d1[i6] * 0.15f + 0.7f) * d13 + d9 * d11;
+                d15 = 1.0F - (1.0F - d15) * (1.0F - d15);
+                if(d15 < 0.0F) {
+                    d15 = 0.0F;
                 }
 
-                if(d15 > 1.0D) {
-                    d15 = 1.0D;
+                if(d15 > 1.0F) {
+                    d15 = 1.0F;
                 }
 
                 d1[i6] = d15;
@@ -73,19 +73,19 @@ public class BetaBiomes {
             biomes = new BiomeGenBase[xSize * zSize];
         }
 
-        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, xChunk, zChunk, xSize, xSize, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
-        this.humidity = this.humidityGenrator.func_4112_a(this.humidity, xChunk, zChunk, xSize, xSize, 0.05F, 0.05F, 0.3333333333333333d);
-        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, xChunk, zChunk, xSize, xSize, 0.25D, 0.25D, 0.5882352941176471D);
+        this.temperature = this.temperatureGenerator.sample(this.temperature, xChunk, zChunk, xSize, zSize, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
+        this.humidity = this.humidityGenrator.sample(this.humidity, xChunk, zChunk, xSize, zSize, 0.05F, 0.05F, 0.3333333333333333d);
+        this.biomeJitter = this.noise9.sample(this.biomeJitter, xChunk, zChunk, xSize, zSize, 0.25D, 0.25D, 0.5882352941176471D);
         int i = 0;
 
         for(int k = 0; k < xSize; ++k) {
             for(int l = 0; l < zSize; ++l) {
-                double d9 = this.biomeJitter[i] * 1.1D + 0.5D;
-                double weightTemp = 0.01D;
-                double tempValue = (this.temperature[i] * 0.15D + 0.7D) * (1.0D - weightTemp) + d9 * weightTemp;
-                double weightHumid = 0.002d;
-                double humidValue = (this.humidity[i] * 0.15D + 0.5D) * (1.0D - weightHumid) + d9 * weightHumid;
-                tempValue = 1.0D - (1.0D - tempValue) * (1.0D - tempValue);
+                float d9 = this.biomeJitter[i] * 1.1F + 0.5F;
+                float weightTemp = 0.01F;
+                float tempValue = (this.temperature[i] * 0.15F + 0.7F) * (1.0F - weightTemp) + d9 * weightTemp;
+                float weightHumid = 0.002F;
+                float humidValue = (this.humidity[i] * 0.15F + 0.5F) * (1.0F - weightHumid) + d9 * weightHumid;
+                tempValue = 1.0F - (1.0F - tempValue) * (1.0F - tempValue);
                 tempValue = MathHelper.clamp(tempValue,0,1);
                 humidValue = MathHelper.clamp(humidValue, 0, 1);
                 this.temperature[i] = tempValue;

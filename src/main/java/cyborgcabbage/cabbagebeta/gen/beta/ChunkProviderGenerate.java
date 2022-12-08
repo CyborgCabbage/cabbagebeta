@@ -27,16 +27,16 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
     private NoiseGeneratorOctaves noise10a;
     private NoiseGeneratorOctaves noise16c;
     private NoiseGeneratorOctaves treeNoise;
-    private double[] terrainNoiseValues;
-    private double[] sandNoise = new double[256];
-    private double[] gravelNoise = new double[256];
-    private double[] stoneNoise = new double[256];
-    double[] highFreq3d8;
-    double[] lowFreq3d16a;
-    double[] lowFreq3d16b;
-    double[] highFreq2d10;
-    double[] lowFreq2d16;
-    private double[] generatedTemperatures;
+    private float[] terrainNoiseValues;
+    private float[] sandNoise = new float[256];
+    private float[] gravelNoise = new float[256];
+    private float[] stoneNoise = new float[256];
+    float[] highFreq3d8;
+    float[] lowFreq3d16a;
+    float[] lowFreq3d16b;
+    float[] highFreq2d10;
+    float[] lowFreq2d16;
+    private float[] generatedTemperatures;
     final protected MapGenBase caveGen;
     private BetaBiomes terrainBiomes;
     private BetaBiomesSampler externalBiomes;
@@ -95,24 +95,24 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
             for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
                 for(int yNoiseIndex = 0; yNoiseIndex < getHeight()/8; ++yNoiseIndex) {
-                    double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * 0.125D;
-                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * 0.125D;
-                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * 0.125D;
-                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * 0.125D;
+                    float v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                    float v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                    float v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                    float v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                    float v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * 0.125f;
+                    float v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * 0.125f;
+                    float v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * 0.125f;
+                    float v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * 0.125f;
                     for(int ySub = 0; ySub < 8; ++ySub) {
                         blockPos.setY(yNoiseIndex * 8 + ySub);
-                        double d35 = v000;
-                        double d37 = v010;
-                        double d39 = (v100 - v000) * 0.25D;
-                        double d41 = (v110 - v010) * 0.25D;
+                        float d35 = v000;
+                        float d37 = v010;
+                        float d39 = (v100 - v000) * 0.25f;
+                        float d41 = (v110 - v010) * 0.25f;
                         for(int xSub = 0; xSub < 4; ++xSub) {
                             blockPos.setX(xNoiseIndex * 4 + xSub);
-                            double density = d35;
-                            double zNoiseStep = (d37 - d35) * 0.25D;
+                            float density = d35;
+                            float zNoiseStep = (d37 - d35) * 0.25f;
                             for(int zSub = 0; zSub < 4; ++zSub) {
                                 blockPos.setZ(zNoiseIndex * 4 + zSub);
                                 Block blockState = Blocks.AIR;
@@ -244,15 +244,15 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         }
     }
 
-    private double[] generateTerrainNoise(double[] noiseArray, int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize) {
+    private float[] generateTerrainNoise(float[] noiseArray, int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize) {
         if(noiseArray == null) {
-            noiseArray = new double[xNoiseSize * yNoiseSize * zNoiseSize];
+            noiseArray = new float[xNoiseSize * yNoiseSize * zNoiseSize];
         }
 
         double hScale = 684.412d;
         double vScale = 684.412d;
-        double[] temp = this.terrainBiomes.temperature;
-        double[] humidity = this.terrainBiomes.humidity;
+        float[] temp = this.terrainBiomes.temperature;
+        float[] humidity = this.terrainBiomes.humidity;
         this.highFreq2d10 = this.noise10a.func_4109_a(this.highFreq2d10, xOffset, zOffset, xNoiseSize, zNoiseSize, 1.121D, 1.121D, 0.5D);
         this.lowFreq2d16 = this.noise16c.func_4109_a(this.lowFreq2d16, xOffset, zOffset, xNoiseSize, zNoiseSize, 200.0D, 200.0D, 0.5D);
         this.highFreq3d8 = this.noise8a.generateNoiseOctaves(this.highFreq3d8, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale / 80.0D, vScale / 160.0D, hScale / 80.0D);
@@ -279,63 +279,63 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                 }else{
                     zSample = zNoiseIndex * samplePeriod + samplePeriod / 2;
                 }
-                double tempVal = temp[xSample * 16 + zSample];
-                double humidityVal = humidity[xSample * 16 + zSample] * tempVal;
-                humidityVal = 1.0D - humidityVal;
+                float tempVal = temp[xSample * 16 + zSample];
+                float humidityVal = humidity[xSample * 16 + zSample] * tempVal;
+                humidityVal = 1.f - humidityVal;
                 humidityVal *= humidityVal;
                 humidityVal *= humidityVal;
-                humidityVal = 1.0D - humidityVal;
-                double highFreqHumid = (this.highFreq2d10[noiseIndex2] + 256.0D) / 512.0D;
+                humidityVal = 1.f - humidityVal;
+                float highFreqHumid = (this.highFreq2d10[noiseIndex2] + 256.f) / 512.f;
                 highFreqHumid *= humidityVal;
-                if(highFreqHumid > 1.0D) {
-                    highFreqHumid = 1.0D;
+                if(highFreqHumid > 1.f) {
+                    highFreqHumid = 1.f;
                 }
 
-                double lowFreq2d3 = this.lowFreq2d16[noiseIndex2] / 8000.0D;
-                if(lowFreq2d3 < 0.0D) {
-                    lowFreq2d3 = -lowFreq2d3 * 0.3d;
+                float lowFreq2d3 = this.lowFreq2d16[noiseIndex2] / 8000.f;
+                if(lowFreq2d3 < 0.f) {
+                    lowFreq2d3 = -lowFreq2d3 * 0.3f;
                 }
 
-                lowFreq2d3 = lowFreq2d3 * 3.0D - 2.0D;
-                if(lowFreq2d3 < 0.0D) {
-                    lowFreq2d3 /= 2.0D;
-                    if(lowFreq2d3 < -1.0D) {
-                        lowFreq2d3 = -1.0D;
+                lowFreq2d3 = lowFreq2d3 * 3.0f - 2.0f;
+                if(lowFreq2d3 < 0.0f) {
+                    lowFreq2d3 /= 2.0f;
+                    if(lowFreq2d3 < -1.0f) {
+                        lowFreq2d3 = -1.0f;
                     }
 
-                    lowFreq2d3 /= 1.4D;
-                    lowFreq2d3 /= 2.0D;
-                    highFreqHumid = 0.0D;
+                    lowFreq2d3 /= 1.4f;
+                    lowFreq2d3 /= 2.0f;
+                    highFreqHumid = 0.0f;
                 } else {
-                    if(lowFreq2d3 > 1.0D) {
-                        lowFreq2d3 = 1.0D;
+                    if(lowFreq2d3 > 1.0f) {
+                        lowFreq2d3 = 1.0f;
                     }
 
-                    lowFreq2d3 /= 8.0D;
+                    lowFreq2d3 /= 8.0f;
                 }
 
-                if(highFreqHumid < 0.0D) {
-                    highFreqHumid = 0.0D;
+                if(highFreqHumid < 0.0f) {
+                    highFreqHumid = 0.0f;
                 }
 
                 highFreqHumid += 0.5D;
-                lowFreq2d3 = lowFreq2d3 * (double) 17 / 16.0D;
-                double groundLevelLocal = (double)prop.groundLevel()/8.0 + lowFreq2d3 * 4.0D;
+                lowFreq2d3 = lowFreq2d3 * (float)17 / 16.0f;
+                float groundLevelLocal = (float)prop.groundLevel()/8.f + lowFreq2d3 * 4.f;
                 ++noiseIndex2;
 
                 for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
-                    double bias = ((double)yNoiseIndex - groundLevelLocal) * prop.factor() / highFreqHumid;
-                    if(bias < 0.0D) {
-                        bias *= 4.0D;
+                    float bias = ((float)yNoiseIndex - groundLevelLocal) * prop.factor() / highFreqHumid;
+                    if(bias < 0.f) {
+                        bias *= 4.f;
                     }
 
-                    double a = this.lowFreq3d16a[noiseIndex] / 512.0D;
-                    double b = this.lowFreq3d16b[noiseIndex] / 512.0D;
-                    double mix = this.highFreq3d8[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
-                    double noiseValue;
-                    if(mix < 0.0D) {
+                    float a = this.lowFreq3d16a[noiseIndex] / 512.f;
+                    float b = this.lowFreq3d16b[noiseIndex] / 512.f;
+                    float mix = this.highFreq3d8[noiseIndex] / 20.f * prop.mixing() + 0.5f;
+                    float noiseValue;
+                    if(mix < 0.0f) {
                         noiseValue = a;
-                    } else if(mix > 1.0D) {
+                    } else if(mix > 1.0f) {
                         noiseValue = b;
                     } else {
                         noiseValue = a + (b - a) * mix;
@@ -343,8 +343,8 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
                     noiseValue -= bias;
                     //Fall-off
                     if(yNoiseIndex > yNoiseSize - 4) {
-                        double d44 = (float)(yNoiseIndex - (yNoiseSize - 4)) / 3.0F;
-                        noiseValue = noiseValue * (1.0D - d44) + -10.0D * d44;
+                        float d44 = (float)(yNoiseIndex - (yNoiseSize - 4)) / 3.0F;
+                        noiseValue = noiseValue * (1.0f - d44) + -10.0f * d44;
                     }
 
                     noiseArray[noiseIndex] = noiseValue;
