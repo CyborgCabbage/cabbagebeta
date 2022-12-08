@@ -15,6 +15,7 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkSection;
 
 import java.util.Random;
 
@@ -91,55 +92,57 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
         long noiseStart = System.nanoTime();
         this.terrainNoiseValues = this.generateTerrainNoise(this.terrainNoiseValues, pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize);
         long interpStart = System.nanoTime();
-        BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
-        for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
-            for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
-                for(int yNoiseIndex = 0; yNoiseIndex < getHeight()/8; ++yNoiseIndex) {
-                    double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * 0.125D;
-                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * 0.125D;
-                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * 0.125D;
-                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * 0.125D;
-                    for(int ySub = 0; ySub < 8; ++ySub) {
-                        blockPos.setY(yNoiseIndex * 8 + ySub);
-                        double d35 = v000;
-                        double d37 = v010;
-                        double d39 = (v100 - v000) * 0.25D;
-                        double d41 = (v110 - v010) * 0.25D;
-                        for(int xSub = 0; xSub < 4; ++xSub) {
-                            blockPos.setX(xNoiseIndex * 4 + xSub);
-                            double density = d35;
-                            double zNoiseStep = (d37 - d35) * 0.25D;
+        for (int sectionY = 0; sectionY < getHeight(); sectionY+=16) {
+            ChunkSection section = chunk.getSection(chunk.getSectionIndex(sectionY));
+            for(int yNoiseIndex = sectionY/8; yNoiseIndex < (sectionY+16)/8; ++yNoiseIndex) {
+                for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
+                    for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
+                        double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                        double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                        double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
+                        double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
+                        double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * 0.125D;
+                        double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * 0.125D;
+                        double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * 0.125D;
+                        double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * 0.125D;
+                        for(int ySub = 0; ySub < 8; ++ySub) {
+                            int y = (yNoiseIndex * 8 + ySub) & 0xF;
+                            double d35 = v000;
+                            double d37 = v100;
+                            double d39 = (v010 - v000) * 0.25D;
+                            double d41 = (v110 - v100) * 0.25D;
                             for(int zSub = 0; zSub < 4; ++zSub) {
-                                blockPos.setZ(zNoiseIndex * 4 + zSub);
-                                Block blockState = Blocks.AIR;
-                                if(density > 0.0D) {
-                                    blockState = Blocks.STONE;
-                                }else if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
-                                    blockState = Blocks.WATER;
-                                    if(yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
-                                        if(terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub] < 0.5D){
-                                            blockState = Blocks.ICE;
+                                int z = zNoiseIndex * 4 + zSub;
+                                double density = d35;
+                                double xStep = (d37 - d35) * 0.25D;
+                                for(int xSub = 0; xSub < 4; ++xSub) {
+                                    if(density > 0.0D) {
+                                        section.setBlockState(xNoiseIndex * 4 + xSub, y, z, Blocks.STONE.getDefaultState(), false);
+                                    }else if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
+                                        Block blockState = Blocks.WATER;
+                                        if(yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
+                                            if(terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub] < 0.5D){
+                                                blockState = Blocks.ICE;
+                                            }
                                         }
+                                        section.setBlockState(xNoiseIndex * 4 + xSub, y, z, blockState.getDefaultState(), false);
                                     }
+
+                                    density += xStep;
                                 }
-                                chunk.setBlockState(blockPos, blockState.getDefaultState(), false);
-                                density += zNoiseStep;
+                                d35 += d39;
+                                d37 += d41;
                             }
-                            d35 += d39;
-                            d37 += d41;
+                            v000 += v001;
+                            v010 += v011;
+                            v100 += v101;
+                            v110 += v111;
                         }
-                        v000 += v001;
-                        v010 += v011;
-                        v100 += v101;
-                        v110 += v111;
                     }
                 }
             }
         }
+
         BetaChunkGenerator.Timers.terrainInterpolate += System.nanoTime() - interpStart;
         BetaChunkGenerator.Timers.terrainNoise += interpStart - noiseStart;
     }
@@ -511,5 +514,9 @@ public class ChunkProviderGenerate extends BetaChunkProvider{
 
     public int getHeight(){
         return prop.useFullHeight() ? 256 : 128;
+    }
+
+    public int getSections(){
+        return prop.useFullHeight() ? 16 : 8;
     }
 }
