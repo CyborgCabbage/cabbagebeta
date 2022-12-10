@@ -4,8 +4,6 @@ import cyborgcabbage.cabbagebeta.gen.BetaPreset;
 import cyborgcabbage.cabbagebeta.gen.BetaProperties;
 import cyborgcabbage.cabbagebeta.gen.beta.BetaChunkGenerator;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.screen.CustomizeBuffetLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.widget.*;
@@ -35,6 +33,7 @@ public class CustomizeBetaLevelScreen extends Screen {
     private SimpleOption<Integer> caveLavaLevelOption = new SimpleOption<>("createWorld.customize.beta.cave_lava_level", SimpleOption.constantTooltip(Text.translatable("createWorld.customize.beta.cave_lava_level.tip")), GameOptions::getGenericValueText, new SimpleOption.ValidatingIntSliderCallbacks(0, 255), 10, a -> {});
     private TextFieldWidget mixingOption;
     private SimpleOption<Boolean> fixesOption = SimpleOption.ofBoolean("createWorld.customize.beta.fixes", SimpleOption.constantTooltip(Text.translatable("createWorld.customize.beta.fixes.tip")), false);
+    private SimpleOption<Boolean> substituteBiomesOption = SimpleOption.ofBoolean("createWorld.customize.beta.substitute_biomes", SimpleOption.constantTooltip(Text.translatable("createWorld.custom.beta.substitute_biomes.tip")), false);
 
     private List<ClickableWidget> propertyWidgets = new ArrayList<>();
 
@@ -123,6 +122,7 @@ public class CustomizeBetaLevelScreen extends Screen {
         caveLavaLevelOption.setValue(initial.caveLavaLevel());
         mixingOption.setText(Float.toString(initial.mixing()));
         fixesOption.setValue(initial.fixes());
+        substituteBiomesOption.setValue(initial.substituteBiomes());
         //CREATE WIDGETS
         propertyWidgets.forEach(this::remove);
         int baseHeight = 30;
@@ -142,6 +142,8 @@ public class CustomizeBetaLevelScreen extends Screen {
         propertyWidgets.add(this.addDrawableChild(useFullHeightOption.createButton(MinecraftClient.getInstance().options, this.width / 2 - 75, baseHeight, 150)));
         baseHeight += 25;
         propertyWidgets.add(this.addDrawableChild(fixesOption.createButton(MinecraftClient.getInstance().options, this.width / 2 - 75, baseHeight, 150)));
+        baseHeight += 25;
+        propertyWidgets.add(this.addDrawableChild(substituteBiomesOption.createButton(MinecraftClient.getInstance().options, this.width / 2 - 75, baseHeight, 150)));
         //SET ACTIVITY
         boolean activity = betaPreset == BetaPreset.CUSTOM;
         propertyWidgets.forEach(c -> c.active = activity);
@@ -155,7 +157,7 @@ public class CustomizeBetaLevelScreen extends Screen {
     }
 
     private BetaProperties propertiesFromOptions(){
-        return new BetaProperties(useFullHeightOption.getValue(), seaLevelOption.getValue(), carefulParse(factorOption, getPreset().getProperties().factor()), groundLevelOption.getValue(), caveLavaLevelOption.getValue(), carefulParse(mixingOption, getPreset().getProperties().mixing()), fixesOption.getValue());
+        return new BetaProperties(useFullHeightOption.getValue(), seaLevelOption.getValue(), carefulParse(factorOption, getPreset().getProperties().factor()), groundLevelOption.getValue(), caveLavaLevelOption.getValue(), carefulParse(mixingOption, getPreset().getProperties().mixing()), fixesOption.getValue(), substituteBiomesOption.getValue());
     }
 
     private float carefulParse(TextFieldWidget field, float orElse){
@@ -183,7 +185,7 @@ public class CustomizeBetaLevelScreen extends Screen {
         return (dynamicRegistryManager, generatorOptions) -> {
             Registry<StructureSet> structures = dynamicRegistryManager.get(Registry.STRUCTURE_SET_KEY);
             Registry<Biome> biomes = dynamicRegistryManager.get(Registry.BIOME_KEY);
-            BetaChunkGenerator chunkGenerator = new BetaChunkGenerator(structures, biomes, "overworld", properties);
+            BetaChunkGenerator chunkGenerator = new BetaChunkGenerator(structures, biomes, properties);
             return GeneratorOptions.create(dynamicRegistryManager, generatorOptions, chunkGenerator);
         };
     }

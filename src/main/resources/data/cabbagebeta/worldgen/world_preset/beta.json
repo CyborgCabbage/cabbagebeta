@@ -19,8 +19,7 @@
     "minecraft:the_nether": {
       "type": "cabbagebeta:beta_nether",
       "generator": {
-        "type": "cabbagebeta:beta",
-        "mode": "nether"
+        "type": "cabbagebeta:beta_nether"
       }
     }
   }

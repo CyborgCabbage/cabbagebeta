@@ -1,4 +1,4 @@
-package cyborgcabbage.cabbagebeta.gen.beta;
+package cyborgcabbage.cabbagebeta.gen.beta.biome;
 
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import cyborgcabbage.cabbagebeta.gen.beta.noise.NoiseGeneratorOctaves2;
