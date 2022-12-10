@@ -1,5 +1,6 @@
 package cyborgcabbage.cabbagebeta.gen.beta.map;
 
+import cyborgcabbage.cabbagebeta.CabbageBeta;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -21,10 +22,10 @@ public class MapGenCaves extends MapGenBase {
 	}
 
 	protected void tunnel(int chunkX, int chunkZ, Chunk chunk, double blockX, double blockY, double blockZ) {
-		this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, 1.0F + this.rand.nextFloat() * 6.0F, 0.0F, 0.0F, -1, -1, 0.5D);
+		this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, 1.0F + this.rand.nextFloat() * 6.0F, 0.0F, 0.0F, -1, -1, 0.5D, false);
 	}
 
-	protected void tunnel(int chunkX, int chunkZ, Chunk chunk, double blockX, double blockY, double blockZ, float radiusFactor, float yaw, float pitch, int segment, int maxSegments, double aspectRatio) {
+	protected void tunnel(int chunkX, int chunkZ, Chunk chunk, double blockX, double blockY, double blockZ, float radiusFactor, float yaw, float pitch, int segment, int maxSegments, double aspectRatio, boolean print) {
 		double chunkCentreX = chunkX * 16 + 8;
 		double chunkCentreZ = chunkZ * 16 + 8;
 		float yawDelta = 0.0F;
@@ -64,20 +65,22 @@ public class MapGenCaves extends MapGenBase {
 			pitchDelta += (random.nextFloat() - random.nextFloat()) * random.nextFloat() * 2.0F;
 			yawDelta += (random.nextFloat() - random.nextFloat()) * random.nextFloat() * 4.0F;
 			if(!isTunnelEnd && segment == splittingSegment && radiusFactor > 1.0F) {
-				this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, random.nextFloat() * 0.5F + 0.5F, yaw - (float)Math.PI / 2F, pitch / 3.0F, segment, maxSegments, 1.0D);
-				this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, random.nextFloat() * 0.5F + 0.5F, yaw + (float)Math.PI / 2F, pitch / 3.0F, segment, maxSegments, 1.0D);
+				this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, random.nextFloat() * 0.5F + 0.5F, yaw - (float)Math.PI / 2F, pitch / 3.0F, segment, maxSegments, 1.0D, false);
+				this.tunnel(chunkX, chunkZ, chunk, blockX, blockY, blockZ, random.nextFloat() * 0.5F + 0.5F, yaw + (float)Math.PI / 2F, pitch / 3.0F, segment, maxSegments, 1.0D, false);
 				return;
 			}
 
 			if(isTunnelEnd || random.nextInt(4) != 0) {
-				double d33 = blockX - chunkCentreX;
-				double d35 = blockZ - chunkCentreZ;
+				double deltaOriginX = blockX - chunkCentreX;
+				double deltaOriginZ = blockZ - chunkCentreZ;
 				double d37 = maxSegments - segment;
 				double d39 = radiusFactor + 2.0F + 16.0F;
-				if(d33 * d33 + d35 * d35 - d37 * d37 > d39 * d39) {
+				if(deltaOriginX * deltaOriginX + deltaOriginZ * deltaOriginZ - d37 * d37 > d39 * d39) {
 					return;
 				}
-
+				if(print) {
+					CabbageBeta.LOGGER.info("Pos: "+blockX+", "+blockY+", "+blockZ+" Hr: "+radius+" Vr: "+verticalRadius+" Seg: "+segment+" MSeg: "+maxSegments);
+				}
 				if(blockX >= chunkCentreX - 16.0D - radius * 2.0D && blockZ >= chunkCentreZ - 16.0D - radius * 2.0D && blockX <= chunkCentreX + 16.0D + radius * 2.0D && blockZ <= chunkCentreZ + 16.0D + radius * 2.0D) {
 					//Create bounds
 					int x1 = (int)Math.floor(blockX - radius) - chunkX * 16 - 1;
@@ -98,8 +101,8 @@ public class MapGenCaves extends MapGenBase {
 						y1 = 1;
 					}
 
-					if(y2 > 120) {
-						y2 = 120;
+					if(y2 > (heightRange-8)) {
+						y2 = heightRange-8;
 					}
 
 					if(z1 < 0) {
@@ -176,14 +179,24 @@ public class MapGenCaves extends MapGenBase {
 	protected void generateFromChunk(Chunk chunk, int xBlock, int zBlock) {
 		int xChunk = chunk.getPos().x;
 		int zChunk = chunk.getPos().z;
-		int loops = this.rand.nextInt(this.rand.nextInt(this.rand.nextInt(40) + 1) + 1);
+		/*int loops = this.rand.nextInt(this.rand.nextInt(this.rand.nextInt(40) + 1) + 1);
 		if(this.rand.nextInt(caveRarity) != 0) {
 			loops = 0;
-		}
+		}*/
+		if(Math.floorMod(xBlock, 8) != 0) return;
+		if(Math.floorMod(zBlock, 8) != 0) return;
 
-		for(int l = 0; l < loops; ++l) {
+		for(int l = 0; l < 4; ++l) {
+			if((xBlock == 0) && (zBlock == 0) && (l == 2)){
+				if((xChunk == 0) && (zChunk == 1)){
+					CabbageBeta.LOGGER.info("s");
+				}
+				if((xChunk == 1) && (zChunk == 0)){
+					CabbageBeta.LOGGER.info("c");
+				}
+			}
 			double x = xBlock * 16 + this.rand.nextInt(16);
-			double y = this.rand.nextInt(this.rand.nextInt(heightRange-8) + 8);
+			double y = 32+l*64;//this.rand.nextInt(this.rand.nextInt(heightRange-8) + 8);
 			double z = zBlock * 16 + this.rand.nextInt(16);
 			int iters = 1;
 			if(this.rand.nextInt(4) == 0) {
@@ -195,7 +208,7 @@ public class MapGenCaves extends MapGenBase {
 				float yaw = this.rand.nextFloat() * (float)Math.PI * 2.0F;//[0, 2*pi]
 				float pitch = (this.rand.nextFloat() - 0.5F) * 2.0F / 8.0F;//[-0.125, 0.125]
 				float radiusFactor = this.rand.nextFloat() * 2.0F + this.rand.nextFloat();
-				this.tunnel(xChunk, zChunk, chunk, x, y, z, radiusFactor, yaw, pitch, 0, 0, 1.0D);
+				this.tunnel(xChunk, zChunk, chunk, x, y, z, radiusFactor, yaw, pitch, 0, 0, 1.0D, false);
 			}
 		}
 

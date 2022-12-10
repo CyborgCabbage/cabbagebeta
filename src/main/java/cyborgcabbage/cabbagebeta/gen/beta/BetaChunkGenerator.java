@@ -29,6 +29,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.Blender;
@@ -106,7 +107,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry, p.substituteBiomes()));
         this.biomeRegistry = biomeRegistry;
         this.prop = p;
-        this.caveGen = new MapGenCaves(p.caveLavaLevel(), getHeight(), 16, 100);
+        this.caveGen = new MapGenCaves(10, 256, 16, 100);
 
 
         if(biomeSource instanceof BetaOverworldBiomeSource bobs){
@@ -138,6 +139,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
+        /*
         //BlockSand.fallInstantly = true;
         int i2 = chunk.getPos().x;
         int i3 = chunk.getPos().z;
@@ -232,7 +234,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         }
 
         //BlockSand.fallInstantly = false;
-
+        */
     }
 
     record WorldGeneratorContext(StructureWorldAccess world, int x, int z){}
@@ -312,9 +314,19 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         var pos = chunk.getPos();
         this.rand.setSeed((long) pos.x * 341873128712L + (long) pos.z * 132897987541L);
-        this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
-        this.generateTerrain(chunk);
-        this.replaceBlocksForBiome(chunk, this.terrainBiomes.biomes);
+        //this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
+        //this.generateTerrain(chunk);
+        //this.replaceBlocksForBiome(chunk, this.terrainBiomes.biomes);
+        BlockState state = Blocks.STONE.getDefaultState();
+        for (ChunkSection chunkSection : chunk.getSectionArray()) {
+            for (int y = 0; y < 16; y++) {
+                for (int z = 0; z < 16; z++) {
+                    for (int x = 0; x < 16; x++) {
+                        chunkSection.setBlockState(x, y, z, state, false);
+                    }
+                }
+            }
+        }
         this.caveGen.generate(chunk, worldSeed);
         return CompletableFuture.completedFuture(chunk);
     }
