@@ -2,7 +2,7 @@
   "generator.cabbagebeta.beta": "Beta",
   "createWorld.customize.beta.title" : "Beta World Customization",
   "createWorld.customize.beta.preset" : "Preset",
-  "createWorld.customize.beta.use_full_height" : "Use Full Height",
+  "createWorld.customize.beta.generation_height" : "Generation Height",
   "createWorld.customize.beta.sea_level" : "Sea Level",
   "createWorld.customize.beta.factor" : "Factor",
   "createWorld.customize.beta.ground_level" : "Ground Level",
@@ -10,6 +10,11 @@
   "createWorld.customize.beta.mixing" : "Mixing",
   "createWorld.customize.beta.fixes" : "Bug Fixes",
   "createWorld.customize.beta.substitute_biomes" : "Modern Biomes",
+  "createWorld.customize.beta.cave_rarity" : "Cave Rarity",
+  "createWorld.customize.beta.decliff" : "De-Cliff",
+  "createWorld.customize.beta.world_scale" : "World Scale",
+  "createWorld.customize.beta.ore_range_scale" : "Ore Range Scale",
+
 
   "createWorld.customize.beta" : "Preset",
 
@@ -18,5 +23,8 @@
   "options.beta_preset.amplified" : "Amplified",
   "options.beta_preset.flooded" : "Flooded",
   "options.beta_preset.smooth" : "Smooth",
+  "options.beta_preset.caving" : "Caving",
+  "options.beta_preset.major" : "Major",
+  "options.beta_preset.minor" : "Minor",
   "options.beta_preset.custom" : "Custom"
 }

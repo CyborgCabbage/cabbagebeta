@@ -10,6 +10,7 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
+import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.WorldPreset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,10 @@ public class CabbageBeta implements ModInitializer {
 
 	public static Map<BiomeGenBase, RegistryKey<Biome>> BETA_TO_MODERN_BIOME = new HashMap<>();
 	public static Map<BiomeGenBase, RegistryKey<Biome>> BETA_TO_SUBSTITUTE_BIOME = new HashMap<>();
+	public static Map<RegistryKey<Biome>, BiomeGenBase> BIOME_TO_BETA_BIOME = new HashMap<>();
+
+	public static final RegistryKey<DimensionType> BETA_OVERWORLD_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_overworld"));
+	public static final RegistryKey<DimensionType> BETA_NETHER_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_nether"));
 
 	//Beta Preset
 	public static final RegistryKey<WorldPreset> BETA_PRESET = RegistryKey.of(Registry.WORLD_PRESET_KEY, id("beta"));
@@ -64,6 +69,8 @@ public class CabbageBeta implements ModInitializer {
 		Registry.register(BuiltinRegistries.BIOME, modernKey, betaBiome.createModernBiome());
 		BETA_TO_MODERN_BIOME.put(betaBiome, modernKey);
 		BETA_TO_SUBSTITUTE_BIOME.put(betaBiome, substituteKey);
+		BIOME_TO_BETA_BIOME.put(modernKey, betaBiome);
+		BIOME_TO_BETA_BIOME.put(substituteKey, betaBiome);
 		return modernKey;
 	}
 

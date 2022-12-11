@@ -43,14 +43,14 @@ public class NoiseGeneratorPerlin2 {
         return (double)i0[0] * d1 + (double)i0[1] * d3;
     }
 
-    public void func_4157_a(double[] d1, double d2, double d4, int i6, int i7, double d8, double d10, double d12) {
+    public void func_4157_a(double[] d1, double d2, double d4, int i6, int i7, double scaleX, double scaleY, double d12) {
         int i14 = 0;
 
         for(int i15 = 0; i15 < i6; ++i15) {
-            double d16 = (d2 + (double)i15) * d8 + this.field_4292_a;
+            double d16 = (d2 + (double)i15) * scaleX + this.field_4292_a;
 
             for(int i18 = 0; i18 < i7; ++i18) {
-                double d19 = (d4 + (double)i18) * d10 + this.field_4291_b;
+                double d19 = (d4 + (double)i18) * scaleY + this.field_4291_b;
                 double d27 = (d16 + d19) * field_4294_f;
                 int i29 = wrap(d16 + d27);
                 int i30 = wrap(d19 + d27);

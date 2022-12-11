@@ -10,10 +10,6 @@ import java.util.Random;
 
 public class MapGenCavesHell extends MapGenBase {
 
-    public MapGenCavesHell(){
-        super(8);
-    }
-
     protected void caveSegment(int chunkX, int chunkZ, Chunk chunk, double blockX, double blockY, double blockZ) {
         this.caveSegment(chunkX, chunkZ, chunk, blockX, blockY, blockZ, 1.0F + this.rand.nextFloat() * 6.0F, 0.0F, 0.0F, -1, -1, 0.5D);
     }

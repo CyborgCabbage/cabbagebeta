@@ -16,13 +16,13 @@ public class NoiseGeneratorOctaves2 {
 
     }
 
-    public double[] func_4112_a(double[] d1, double d2, double d4, int i6, int i7, double d8, double d10, double d12) {
-        return this.func_4111_a(d1, d2, d4, i6, i7, d8, d10, d12, 0.5D);
+    public double[] func_4112_a(double[] d1, double d2, double d4, int i6, int i7, double scaleX, double scaleY, double d12) {
+        return this.func_4111_a(d1, d2, d4, i6, i7, scaleX, scaleY, d12, 0.5D);
     }
 
-    public double[] func_4111_a(double[] d1, double d2, double d4, int i6, int i7, double d8, double d10, double d12, double d14) {
-        d8 /= 1.5D;
-        d10 /= 1.5D;
+    public double[] func_4111_a(double[] d1, double d2, double d4, int i6, int i7, double scaleX, double scaleY, double d12, double d14) {
+        scaleX /= 1.5D;
+        scaleY /= 1.5D;
         if(d1 != null && d1.length >= i6 * i7) {
             for(int i16 = 0; i16 < d1.length; ++i16) {
                 d1[i16] = 0.0D;
@@ -35,7 +35,7 @@ public class NoiseGeneratorOctaves2 {
         double d18 = 1.0D;
 
         for(int i20 = 0; i20 < this.field_4233_b; ++i20) {
-            this.field_4234_a[i20].func_4157_a(d1, d2, d4, i6, i7, d8 * d18, d10 * d18, 0.55D / d21);
+            this.field_4234_a[i20].func_4157_a(d1, d2, d4, i6, i7, scaleX * d18, scaleY * d18, 0.55D / d21);
             d18 *= d12;
             d21 *= d14;
         }

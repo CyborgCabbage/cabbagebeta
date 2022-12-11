@@ -10,16 +10,18 @@ public class BetaBiomes {
     private final NoiseGeneratorOctaves2 temperatureGenerator;
     private final NoiseGeneratorOctaves2 humidityGenrator;
     private final NoiseGeneratorOctaves2 noise9;
+    private final double worldScale;
     public double[] temperature;
     public double[] humidity;
     public double[] biomeJitter;
     public BiomeGenBase[] biomeRegion;
     public BiomeGenBase[] biomes;
 
-    public BetaBiomes(long seed) {
+    public BetaBiomes(long seed, double worldScale) {
         this.temperatureGenerator = new NoiseGeneratorOctaves2(new Random(seed * 9871L), 4);
         this.humidityGenrator = new NoiseGeneratorOctaves2(new Random(seed * 39811L), 4);
         this.noise9 = new NoiseGeneratorOctaves2(new Random(seed * 543321L), 2);
+        this.worldScale = worldScale;
     }
 
     public BiomeGenBase getBiomeAtBlock(int x, int z) {
@@ -27,7 +29,7 @@ public class BetaBiomes {
     }
 
     public double getTemperature(int i1, int i2) {
-        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, i1, i2, 1, 1, 0.02500000037252903d, 0.02500000037252903d, 0.5D);
+        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, i1, i2, 1, 1, 0.02500000037252903d*worldScale, 0.02500000037252903d*worldScale, 0.5D);
         return this.temperature[0];
     }
 
@@ -41,8 +43,8 @@ public class BetaBiomes {
             d1 = new double[i4 * i5];
         }
 
-        d1 = this.temperatureGenerator.func_4112_a(d1, i2, i3, i4, i5, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
-        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, i2, i3, i4, i5, 0.25D, 0.25D, 0.5882352941176471D);
+        d1 = this.temperatureGenerator.func_4112_a(d1, i2, i3, i4, i5, 0.02500000037252903d*worldScale, 0.02500000037252903d*worldScale, 0.25D);
+        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, i2, i3, i4, i5, 0.25D*worldScale, 0.25D*worldScale, 0.5882352941176471D);
         int i6 = 0;
 
         for(int i7 = 0; i7 < i4; ++i7) {
@@ -73,9 +75,9 @@ public class BetaBiomes {
             biomes = new BiomeGenBase[xSize * zSize];
         }
 
-        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, xChunk, zChunk, xSize, xSize, 0.02500000037252903d, 0.02500000037252903d, 0.25D);
-        this.humidity = this.humidityGenrator.func_4112_a(this.humidity, xChunk, zChunk, xSize, xSize, 0.05F, 0.05F, 0.3333333333333333d);
-        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, xChunk, zChunk, xSize, xSize, 0.25D, 0.25D, 0.5882352941176471D);
+        this.temperature = this.temperatureGenerator.func_4112_a(this.temperature, xChunk, zChunk, xSize, xSize, 0.02500000037252903d*worldScale, 0.02500000037252903d*worldScale, 0.25D);
+        this.humidity = this.humidityGenrator.func_4112_a(this.humidity, xChunk, zChunk, xSize, xSize, 0.05F*worldScale, 0.05F*worldScale, 0.3333333333333333d);
+        this.biomeJitter = this.noise9.func_4112_a(this.biomeJitter, xChunk, zChunk, xSize, xSize, 0.25D*worldScale, 0.25D*worldScale, 0.5882352941176471D);
         int i = 0;
 
         for(int k = 0; k < xSize; ++k) {
