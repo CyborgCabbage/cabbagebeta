@@ -1,9 +1,11 @@
 package cyborgcabbage.cabbagebeta.gen.beta;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.BetaProperties;
+import cyborgcabbage.cabbagebeta.gen.MyNoisePos;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomes;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomesSampler;
@@ -18,15 +20,13 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Material;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureSet;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.BuiltinRegistries;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.registry.*;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
@@ -40,8 +40,13 @@ import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.StructureWeightSampler;
 import net.minecraft.world.gen.chunk.*;
 import net.minecraft.world.gen.noise.NoiseConfig;
+import net.minecraft.world.gen.structure.Structure;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -81,6 +86,11 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     double[] lowFreq3d16b;
     double[] highFreq2d10;
     double[] lowFreq2d16;
+    double[] highFreq3d8s;
+    double[] lowFreq3d16as;
+    double[] lowFreq3d16bs;
+    double[] highFreq2d10s;
+    double[] lowFreq2d16s;
     private double[] generatedTemperatures;
     final protected MapGenBase caveGen;
     private BetaBiomes terrainBiomes;
@@ -123,7 +133,20 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         }
     }
 
-        @Override
+    @Override
+    public void computeStructurePlacementsIfNeeded(NoiseConfig noiseConfig) {
+        init(noiseConfig.getLegacyWorldSeed());
+        super.computeStructurePlacementsIfNeeded(noiseConfig);
+    }
+
+    @Nullable
+    @Override
+    public Pair<BlockPos, RegistryEntry<Structure>> locateStructure(ServerWorld world, RegistryEntryList<Structure> structures, BlockPos center, int radius, boolean skipReferencedStructures) {
+        init(world.getSeed());
+        return super.locateStructure(world, structures, center, radius, skipReferencedStructures);
+    }
+
+    @Override
     public int getSeaLevel() {
         return prop.seaLevel();
     }
@@ -148,7 +171,9 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
-        if(!prop.substituteBiomes()) {
+        if(prop.substituteBiomes()) {
+            super.generateFeatures(world, chunk, structureAccessor);
+        }else{
             //BlockSand.fallInstantly = true;
             int chunkCoordX = chunk.getPos().x;
             int chunkCoordZ = chunk.getPos().z;
@@ -318,7 +343,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                 return;
             }
             HeightContext heightContext = new HeightContext(this, region);
-            this.buildSurface(chunk, heightContext, noiseConfig, structures, region.getBiomeAccess(), region.getRegistryManager().get(Registry.BIOME_KEY), Blender.getBlender(region));
+            this.buildSurface(chunk, heightContext, noiseConfig, structures, region.getBiomeAccess(), biomeRegistry, Blender.getBlender(region));
         }else {
             ChunkPos pos = chunk.getPos();
             BiomeAccess biomeAccess = region.getBiomeAccess();
@@ -408,13 +433,23 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
             }
         }
     }
-    public void buildSurface(Chunk chunk2, HeightContext heightContext, NoiseConfig noiseConfig, StructureAccessor structureAccessor, BiomeAccess biomeAccess, Registry<Biome> biomeRegistry, Blender blender) {
-        ChunkNoiseSampler chunkNoiseSampler = chunk2.getOrCreateChunkNoiseSampler(chunk -> this.createChunkNoiseSampler((Chunk)chunk, structureAccessor, blender, noiseConfig));
-        noiseConfig.getSurfaceBuilder().buildSurface(noiseConfig, biomeAccess, biomeRegistry, getOverworldSettings().usesLegacyRandom(), heightContext, chunk2, chunkNoiseSampler, getOverworldSettings().surfaceRule());
+
+    public void buildSurface(Chunk chunk, HeightContext heightContext, NoiseConfig noiseConfig, StructureAccessor structureAccessor, BiomeAccess biomeAccess, Registry<Biome> biomeRegistry, Blender blender) {
+        ChunkNoiseSampler chunkNoiseSampler = getOrCreateChunkNoiseSampler(chunk, noiseConfig, structureAccessor, blender);
+        noiseConfig.getSurfaceBuilder().buildSurface(noiseConfig, biomeAccess, biomeRegistry, getOverworldSettings().usesLegacyRandom(), heightContext, chunk, chunkNoiseSampler, getOverworldSettings().surfaceRule());
     }
 
-    private ChunkNoiseSampler createChunkNoiseSampler(Chunk chunk, StructureAccessor world, Blender blender, NoiseConfig noiseConfig) {
-        return ChunkNoiseSampler.create(chunk, noiseConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), getOverworldSettings(), this.fluidLevelSampler, blender);
+    private BetaChunkNoiseSampler getOrCreateChunkNoiseSampler(Chunk chunk, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Blender blender) {
+        return (BetaChunkNoiseSampler)chunk.getOrCreateChunkNoiseSampler(ch -> this.createChunkNoiseSampler(ch, structureAccessor, blender, noiseConfig));
+    }
+
+    private BetaChunkNoiseSampler createChunkNoiseSampler(Chunk chunk, StructureAccessor world, Blender blender, NoiseConfig noiseConfig) {
+        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk);
+        ChunkPos chunkPos = chunk.getPos();
+        int i = 16 / generationShapeConfig.horizontalBlockSize();
+        return new BetaChunkNoiseSampler(
+                i, noiseConfig, chunkPos.getStartX(), chunkPos.getStartZ(), generationShapeConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), getOverworldSettings(), fluidLevelSampler, blender
+        );
     }
 
     private ChunkGeneratorSettings getOverworldSettings(){
@@ -434,6 +469,8 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         var pos = chunk.getPos();
+        StructureWeightSampler weightSampler = StructureWeightSampler.createStructureWeightSampler(structureAccessor, pos);
+        MyNoisePos beardPos = new MyNoisePos();
         this.rand.setSeed((long) pos.x * 341873128712L + (long) pos.z * 132897987541L);
         this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
         int horizontalNoiseSize = 4;
@@ -454,9 +491,9 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                     double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * yFrac;
                     double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * yFrac;
                     double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * yFrac;
-
                     for(int ySub = 0; ySub < 8; ++ySub) {
                         blockPos.setY(yNoiseIndex * 8 + ySub);
+                        beardPos.y = yNoiseIndex * 8 + ySub;
                         double xFrac = 0.25D;
                         double d35 = v000;
                         double d37 = v010;
@@ -465,12 +502,14 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
                         for(int xSub = 0; xSub < 4; ++xSub) {
                             blockPos.setX(xNoiseIndex * 4 + xSub);
+                            beardPos.x = xNoiseIndex * 4 + xSub;
                             double zFrac = 0.25D;
                             double density = d35;
                             double zNoiseStep = (d37 - d35) * zFrac;
 
                             for(int zSub = 0; zSub < 4; ++zSub) {
                                 blockPos.setZ(zNoiseIndex * 4 + zSub);
+                                beardPos.z = zNoiseIndex * 4 + zSub;
                                 double d53 = terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub];
                                 Block blockState = Blocks.AIR;
                                 if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
@@ -480,9 +519,15 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                                         blockState = Blocks.WATER;
                                     }
                                 }
-
-                                if(density > 0.0D) {
-                                    blockState = Blocks.STONE;
+                                double value = weightSampler.sample(beardPos);
+                                if(value == 0.0) {
+                                    if (density > 0.0D) {
+                                        blockState = Blocks.STONE;
+                                    }
+                                }else{
+                                    if(value > 0) {
+                                        blockState = Blocks.STONE;
+                                    }
                                 }
                                 chunk.setBlockState(blockPos, blockState.getDefaultState(), false);
                                 density += zNoiseStep;
@@ -621,6 +666,103 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         return noiseArray;
     }
 
+    private double[] generateTerrainNoiseColumn(double[] noiseArray, double xOffset, double yOffset, double zOffset, int yNoiseSize) {
+        if(noiseArray == null) {
+            noiseArray = new double[yNoiseSize];
+        }
+
+        double hScale = 684.412d;
+        double vScale = 684.412d;
+        double temp = this.biomeSampler.getTemperatureAtBlock((int)(xOffset*4), (int)(zOffset*4));
+        double humidity = this.biomeSampler.getHumidityAtBlock((int)(xOffset*4), (int)(zOffset*4));
+
+        this.highFreq2d10s = this.noise10a.generateNoiseOctaves(this.highFreq2d10s, xOffset, 10.0D, zOffset, 1, 1, 1, 1.121D*prop.worldScale(), 1.0D, 1.121D*prop.worldScale());
+        this.lowFreq2d16s = this.noise16c.generateNoiseOctaves(this.lowFreq2d16s, xOffset, 10.0D, zOffset, 1, 1, 1, 200.0D*prop.worldScale(), 1.0D, 200.0D*prop.worldScale());
+        this.highFreq3d8s = this.noise8a.generateNoiseOctaves(this.highFreq3d8s, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale / 80.0D*prop.worldScale(), vScale / 160.0D*prop.worldScale(), hScale / 80.0D*prop.worldScale());
+        this.lowFreq3d16as = this.noise16a.generateNoiseOctaves(this.lowFreq3d16as, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        this.lowFreq3d16bs = this.noise16b.generateNoiseOctaves(this.lowFreq3d16bs, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        int noiseIndex = 0;
+        double humidityVal = humidity * temp;
+        humidityVal = 1.0D - humidityVal;
+        humidityVal *= humidityVal;
+        humidityVal *= humidityVal;
+        humidityVal = 1.0D - humidityVal;
+        double highFreqHumid = (this.highFreq2d10s[0] + 256.0D) / 512.0D;
+        highFreqHumid *= humidityVal;
+        if(highFreqHumid > 1.0D) {
+            highFreqHumid = 1.0D;
+        }
+
+        double lowFreq2d3 = this.lowFreq2d16s[0] / 8000.0D;
+        if(lowFreq2d3 < 0.0D) {
+            lowFreq2d3 = -lowFreq2d3 * 0.3d;
+        }
+
+        lowFreq2d3 = lowFreq2d3 * 3.0D - 2.0D;
+        if(lowFreq2d3 < 0.0D) {
+            lowFreq2d3 /= 2.0D;
+            if(lowFreq2d3 < -1.0D) {
+                lowFreq2d3 = -1.0D;
+            }
+
+            lowFreq2d3 /= 1.4D;
+            lowFreq2d3 /= 2.0D;
+            //double decliff = 0.3;//[0, 1.0] -> [0, 0.35]
+            if(prop.decliff()*0.35 <= 0.001){
+                highFreqHumid = 0.0D;
+            }else{
+                double temp2 = lowFreq2d3*(-1/(prop.decliff()*0.35));
+                highFreqHumid *= Math.max(0.9*(1-temp2), 0);
+            }
+
+
+        } else {
+            if(lowFreq2d3 > 1.0D) {
+                lowFreq2d3 = 1.0D;
+            }
+
+            lowFreq2d3 /= 8.0D;
+        }
+
+        if(highFreqHumid < 0.0D) {
+            highFreqHumid = 0.0D;
+        }
+
+        highFreqHumid += 0.5D;
+        lowFreq2d3 = lowFreq2d3 * (double) 17 / 16.0D;
+        double groundLevelLocal = (double)prop.groundLevel()/8.0 + lowFreq2d3 * 4.0D;
+        for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
+            double bias = ((double)yNoiseIndex*prop.worldScale() - groundLevelLocal) * prop.factor() / highFreqHumid;
+            if(bias < 0.0D) {
+                bias *= 4.0D;
+            }
+
+            double a = this.lowFreq3d16as[noiseIndex] / 512.0D;
+            double b = this.lowFreq3d16bs[noiseIndex] / 512.0D;
+            double mix = this.highFreq3d8s[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
+            double noiseValue;
+            if(mix < 0.0D) {
+                noiseValue = a;
+            } else if(mix > 1.0D) {
+                noiseValue = b;
+            } else {
+                noiseValue = a + (b - a) * mix;
+            }
+            noiseValue -= bias;
+            //Fall-off
+            float fallOffStart = getHeight() == 64 ? 2 : 4;
+            if(yNoiseIndex > yNoiseSize - fallOffStart) {
+                double d44 = (yNoiseIndex - (yNoiseSize - fallOffStart)) / (fallOffStart-1.f);
+                noiseValue = noiseValue * (1.0D - d44) + -10.0D * d44;
+            }
+
+            noiseArray[noiseIndex] = noiseValue;
+            ++noiseIndex;
+        }
+        return noiseArray;
+    }
+
+
     @Override
     public int getMinimumY() {
         return 0;
@@ -628,7 +770,18 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
-        return getHeight()/2;
+        int yNoiseSize = getHeight()/8+1;
+        double[] noise = generateTerrainNoiseColumn(null, x * 0.25, 0, z * 0.25, yNoiseSize);
+        for (int i = noise.length-1; i > 0; i--) {
+            double above = noise[i];
+            double below = noise[i-1];
+            if(above < 0 && below > 0){
+                //Found ground
+                double delta = -above/(below-above);
+                return Math.min(i*8-(int)Math.floor(8*delta), getHeight());
+            }
+        }
+        return world.getBottomY();
     }
 
     @Override
@@ -649,7 +802,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     }
 
     public BiomeGenBase getBiome(int x, int z) {
-        if(rand == null) return BiomeGenBase.iceDesert;
+        if(rand == null) return BiomeGenBase.sky;
         return biomeSampler.getBiomeAtBlock(x, z);
     }
 }

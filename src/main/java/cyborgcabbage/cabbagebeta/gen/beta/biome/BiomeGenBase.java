@@ -79,14 +79,6 @@ public class BiomeGenBase {
 			.setTrees(false, -20)
 			.setDandelions(3)
 			.setShrubs(10);
-	public static final BiomeGenBase iceDesert = (new BiomeGenDesert())
-			.setColor(0xffed93)
-			.setBiomeName("Ice Desert")
-			.setEnableSnow()
-			.setDisableRain()
-			.setOtherColor(0xc4d339)
-			.setTemperature(0.40f)
-			.setHumidity(0.20f);
 	public static final BiomeGenBase tundra = (new BiomeGenBase())
 			.setColor(0x57ebf9)
 			.setBiomeName("Tundra")
@@ -218,7 +210,6 @@ public class BiomeGenBase {
 			}
 		}
 		desert.topBlock = desert.fillerBlock = Blocks.SAND.getDefaultState();
-		iceDesert.topBlock = iceDesert.fillerBlock = Blocks.SAND.getDefaultState();
 	}
 
 	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {

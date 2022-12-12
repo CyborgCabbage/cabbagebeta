@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
-import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
@@ -36,7 +35,6 @@ public class BetaOverworldBiomeSource extends BiomeSource {
                 BiomeGenBase.taiga,
                 BiomeGenBase.desert,
                 BiomeGenBase.plains,
-                BiomeGenBase.iceDesert,
                 BiomeGenBase.tundra,
                 BiomeGenBase.hell,
                 BiomeGenBase.sky)
@@ -63,7 +61,7 @@ public class BetaOverworldBiomeSource extends BiomeSource {
 
     @Override
     public RegistryEntry<Biome> getBiome(int x, int y, int z, MultiNoiseUtil.MultiNoiseSampler noise) {
-        if(gen == null) return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_ICE_DESERT);
+        if(gen == null) return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_SKY);
         BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
         if(substituteBiomes){
             return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(b));

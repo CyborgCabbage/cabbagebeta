@@ -32,7 +32,6 @@ public class CabbageBeta implements ModInitializer {
 	public static RegistryKey<Biome> BETA_TAIGA;
 	public static RegistryKey<Biome> BETA_DESERT;
 	public static RegistryKey<Biome> BETA_PLAINS;
-	public static RegistryKey<Biome> BETA_ICE_DESERT;
 	public static RegistryKey<Biome> BETA_TUNDRA;
 	public static RegistryKey<Biome> BETA_HELL;
 	public static RegistryKey<Biome> BETA_SKY;
@@ -59,7 +58,6 @@ public class CabbageBeta implements ModInitializer {
 		BETA_TAIGA = registerBetaBiome("beta_taiga", BiomeGenBase.taiga, BiomeKeys.SNOWY_TAIGA);
 		BETA_DESERT = registerBetaBiome("beta_desert", BiomeGenBase.desert, BiomeKeys.DESERT);
 		BETA_PLAINS = registerBetaBiome("beta_plains", BiomeGenBase.plains, BiomeKeys.PLAINS);
-		BETA_ICE_DESERT = registerBetaBiome("beta_ice_desert", BiomeGenBase.iceDesert, BiomeKeys.PLAINS);
 		BETA_TUNDRA = registerBetaBiome("beta_tundra", BiomeGenBase.tundra, BiomeKeys.SNOWY_PLAINS);
 		BETA_HELL = registerBetaBiome("beta_hell", BiomeGenBase.hell, BiomeKeys.NETHER_WASTES);
 		BETA_SKY = registerBetaBiome("beta_sky", BiomeGenBase.sky, BiomeKeys.WINDSWEPT_HILLS);

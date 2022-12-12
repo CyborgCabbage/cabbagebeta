@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta.gen.beta.biome;
 
-import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import cyborgcabbage.cabbagebeta.gen.beta.noise.NoiseGeneratorOctaves2;
 import net.minecraft.util.math.MathHelper;
 
