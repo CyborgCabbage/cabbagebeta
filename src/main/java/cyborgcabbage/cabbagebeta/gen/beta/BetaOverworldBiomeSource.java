@@ -18,13 +18,13 @@ import java.util.stream.Stream;
 public class BetaOverworldBiomeSource extends BiomeSource {
     public static final Codec<BetaOverworldBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(biomeSource -> null),
-            Codec.BOOL.fieldOf("substitute_biomes").orElse(false).forGetter(BetaOverworldBiomeSource::getSubstituteBiomes)
+            Codec.BOOL.fieldOf("features").orElse(false).forGetter(BetaOverworldBiomeSource::getModernised)
     ).apply(instance, instance.stable(BetaOverworldBiomeSource::new)));
     private BetaBiomeProvider gen;
     private final Registry<Biome> biomeRegistry;
-    private final boolean substituteBiomes;
+    private final boolean modernised;
 
-    protected BetaOverworldBiomeSource(Registry<Biome> biomeRegistry, boolean substituteBiomes) {
+    protected BetaOverworldBiomeSource(Registry<Biome> biomeRegistry, boolean modernised) {
         super(Stream.of(
                 BiomeGenBase.rainforest,
                 BiomeGenBase.swampland,
@@ -39,7 +39,7 @@ public class BetaOverworldBiomeSource extends BiomeSource {
                 BiomeGenBase.hell,
                 BiomeGenBase.sky)
                 .map(biomeGenBase -> {
-                    if(substituteBiomes){
+                    if(modernised){
                         return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(biomeGenBase));
                     }else{
                         return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(biomeGenBase));
@@ -47,7 +47,7 @@ public class BetaOverworldBiomeSource extends BiomeSource {
                 })
         );
         this.biomeRegistry = biomeRegistry;
-        this.substituteBiomes = substituteBiomes;
+        this.modernised = modernised;
     }
 
     public void setGenerator(BetaBiomeProvider generator){
@@ -63,14 +63,14 @@ public class BetaOverworldBiomeSource extends BiomeSource {
     public RegistryEntry<Biome> getBiome(int x, int y, int z, MultiNoiseUtil.MultiNoiseSampler noise) {
         if(gen == null) return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_SKY);
         BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
-        if(substituteBiomes){
+        if(modernised){
             return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(b));
         }else{
             return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(b));
         }
     }
 
-    public boolean getSubstituteBiomes() {
-        return substituteBiomes;
+    public boolean getModernised() {
+        return modernised;
     }
 }

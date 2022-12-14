@@ -11,14 +11,20 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 
 public class BetaChunkNoiseSampler extends ChunkNoiseSampler {
     private final Long2IntMap surfaceHeightEstimateCache = new Long2IntOpenHashMap();
-    private final DensityFunctionTypes.Beardifying beardifying;
+    public final DensityFunction beardFunction;
+    private final BetaChunkGenerator columnSource;
 
-    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender) {
+    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender, BetaChunkGenerator columnSource) {
         super(horizontalCellCount, noiseConfig, startX, startZ, generationShapeConfig, beardifying, chunkGeneratorSettings, fluidLevelSampler, blender);
-        this.beardifying = beardifying;
+        this.columnSource = columnSource;
+        beardFunction = DensityFunctionTypes.cacheAllInCell(DensityFunctionTypes.Beardifier.INSTANCE).apply(this::getActualDensityFunction);
+
     }
 
-    @Override
+    public double sampleBeard() {
+        return beardFunction.sample(this);
+    }
+
     public int estimateSurfaceHeight(int blockX, int blockZ) {
         int i = BiomeCoords.toBlock(BiomeCoords.fromBlock(blockX));
         int j = BiomeCoords.toBlock(BiomeCoords.fromBlock(blockZ));
@@ -26,50 +32,15 @@ public class BetaChunkNoiseSampler extends ChunkNoiseSampler {
     }
 
     private int calculateSurfaceHeightEstimate(long columnPos) {
-        int i = ColumnPos.getX(columnPos);
-        int j = ColumnPos.getZ(columnPos);
-        /*int k = this.generationShapeConfig.minimumY();
-
-        for(int l = k + this.generationShapeConfig.height(); l >= k; l -= this.verticalBlockSize) {
-            if (this.initialDensityWithoutJaggedness.sample(new DensityFunction.UnblendedNoisePos(i, l, j)) > 0.390625) {
-                return l;
+        int x = ColumnPos.getX(columnPos);
+        int z = ColumnPos.getZ(columnPos);
+        int yNoiseSize = columnSource.getHeight()/8+1;
+        double[] noise = columnSource.generateTerrainNoiseColumn(null, x * 0.25, 0, z * 0.25, yNoiseSize);
+        for (int r = noise.length-1; r > 0; r--) {
+            if (noise[r]*0.01 > 0.390625) {
+                return r*8;
             }
-        }*/
-
-        return 64;
-    }
-
-    public double getBeard(int x, int y, int z){
-        bsp.set(x,y,z);
-        return beardifying.sample(bsp);
-    }
-
-    private final BeardSamplePoint bsp = new BeardSamplePoint();
-
-    static class BeardSamplePoint implements DensityFunction.NoisePos {
-        int x = 0;
-        int y = 0;
-        int z = 0;
-
-        public void set(int x, int y, int z){
-            this.x = x;
-            this.y = y;
-            this.z = z;
         }
-
-        @Override
-        public int blockX() {
-            return x;
-        }
-
-        @Override
-        public int blockY() {
-            return y;
-        }
-
-        @Override
-        public int blockZ() {
-            return z;
-        }
+        return Integer.MAX_VALUE;
     }
 }

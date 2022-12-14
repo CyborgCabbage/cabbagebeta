@@ -3,3 +3,4 @@ accessible	method	net/minecraft/world/biome/OverworldBiomeCreator getSkyColor (F
 accessible	method	net/minecraft/client/gui/screen/world/MoreOptionsDialog apply (Lnet/minecraft/client/world/GeneratorOptionsHolder$Modifier;)V
 accessible	method	net/minecraft/client/gui/screen/world/MoreOptionsDialog apply (Lnet/minecraft/client/world/GeneratorOptionsHolder$RegistryAwareModifier;)V
 accessible field net/minecraft/client/gui/screen/world/LevelScreenProvider WORLD_PRESET_TO_SCREEN_PROVIDER Ljava/util/Map;
+accessible class net/minecraft/world/gen/densityfunction/DensityFunctionTypes$Beardifier

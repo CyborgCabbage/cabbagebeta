@@ -3,15 +3,15 @@ package cyborgcabbage.cabbagebeta.gen;
 import net.minecraft.text.Text;
 
 public enum BetaPreset {
-    FAITHFUL("faithful", new BetaProperties(2, 64, 12, 68, 10, 1, false, false, 15, 0, 1, 1)),
-    IMPROVED("improved", new BetaProperties(2, 64, 12, 68, 10, 1, true, false, 15, 0, 1, 1)),
-    AMPLIFIED("amplified", new BetaProperties(4, 64, 6, 68, 10, .5f, true, false, 15, .3f, 1, 1)),
-    FLOODED("flooded", new BetaProperties(2, 84, 12, 68, 10, 1, false, false, 15, 0, 1, 1)),
-    SMOOTH("smooth", new BetaProperties(2, 64, 12, 68, 10, .5f, false, false, 15, 0, 1, 1)),
-    CAVING("caving", new BetaProperties(4, 128, 9, 132, 20, 1, true, false, 4, 0, 1, 2)),
-    MAJOR("major", new BetaProperties(4, 128, 12, 68, 20, 1, true, false, 15, 0, 0.5f, 2)),
-    MINOR("minor", new BetaProperties(1, 32, 12, 68, 6, 1, true, false, 15, 0, 2.0f, 0.5f)),
-    CUSTOM("custom", new BetaProperties(2, 64, 12, 68, 10, 1, false, false, 15, 0, 1, 1));
+    FAITHFUL("faithful", new BetaProperties(128, 64, 12, 68, 10, 1, false, FeaturesProperty.BETA, 15, 0, 1, 1, false)),
+    IMPROVED("improved", new BetaProperties(128, 64, 12, 68, 10, 1, true, FeaturesProperty.BETA, 15, 0, 1, 1, false)),
+    AMPLIFIED("amplified", new BetaProperties(256, 64, 6, 68, 10, .5f, true, FeaturesProperty.BETA, 15, .3f, 1, 1, false)),
+    FLOODED("flooded", new BetaProperties(128, 84, 12, 68, 10, 1, false, FeaturesProperty.BETA, 15, 0, 1, 1, false)),
+    SMOOTH("smooth", new BetaProperties(128, 64, 12, 68, 10, .5f, false, FeaturesProperty.BETA, 15, 0, 1, 1, false)),
+    CAVING("caving", new BetaProperties(256, 128, 9, 132, 20, 1, true, FeaturesProperty.BETA, 4, 0, 1, 2, false)),
+    MAJOR("major", new BetaProperties(256, 128, 12, 68, 20, 1, true, FeaturesProperty.BETA, 15, 0, 2, 2, false)),
+    MINOR("minor", new BetaProperties(64, 32, 12, 68, 6, 1, true, FeaturesProperty.BETA, 15, 0, .5f, .5f, false)),
+    CUSTOM("custom", new BetaProperties(128, 64, 12, 68, 10, 1, false, FeaturesProperty.BETA, 15, 0, 1, 1, false));
 
     private final String name;
     private final BetaProperties properties;

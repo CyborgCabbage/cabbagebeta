@@ -2,6 +2,7 @@ package cyborgcabbage.cabbagebeta.gen.beta.map;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.chunk.Chunk;
@@ -10,13 +11,15 @@ import java.util.Random;
 
 public class MapGenCaves extends MapGenBase {
 	private final int lavaLevel;
-	private final int heightRange;
+	private final int bottom;
+	private final int height;
 	private final int caveRarity;
 	private final boolean fixes;
 
-	public MapGenCaves(int lavaLevel, int heightRange, int caveRarity, boolean fixes) {
+	public MapGenCaves(int lavaLevel, int bottom, int height, int caveRarity, boolean fixes) {
 		this.lavaLevel = lavaLevel;
-		this.heightRange = heightRange;
+		this.bottom = bottom;
+		this.height = height;
 		this.caveRarity = caveRarity;
 		this.fixes = fixes;
 	}
@@ -97,16 +100,16 @@ public class MapGenCaves extends MapGenBase {
 						x2 = 16;
 					}
 
-					if(y1 < 1) {
+					if(y1 < bottom) {
 						y1 = 1;
 					}
 					if(fixes){
-						if(y2 > heightRange) {
-							y2 = heightRange;
+						if(y2 > height+bottom) {
+							y2 = height+bottom;
 						}
 					}else{
-						if(y2 > (heightRange-8)) {
-							y2 = heightRange-8;
+						if(y2 > (height+bottom-8)) {
+							y2 = height+bottom-8;
 						}
 					}
 
@@ -154,7 +157,7 @@ public class MapGenCaves extends MapGenBase {
 												hitGrass = true;
 											}
 
-											if(block.isOf(Blocks.STONE) || block.isOf(Blocks.DIRT) || block.isOf(Blocks.GRASS_BLOCK)) {
+											if(block.isOf(Blocks.STONE) || block.isOf(Blocks.DEEPSLATE) || block.isOf(Blocks.DIRT) || block.isOf(Blocks.GRASS_BLOCK)) {
 												if(yi < lavaLevel) {
 													chunk.setBlockState(pos, Blocks.LAVA.getDefaultState(), false);
 												} else {
@@ -189,7 +192,7 @@ public class MapGenCaves extends MapGenBase {
 
 		for(int l = 0; l < loops; ++l) {
 			int x = xBlock * 16 + this.rand.nextInt(16);
-			int y = this.rand.nextInt(this.rand.nextInt(heightRange-8) + 8);
+			int y = bottom+this.rand.nextInt(this.rand.nextInt(height -8) + 8);
 			int z = zBlock * 16 + this.rand.nextInt(16);
 			int iters = 1;
 			if(this.rand.nextInt(4) == 0) {

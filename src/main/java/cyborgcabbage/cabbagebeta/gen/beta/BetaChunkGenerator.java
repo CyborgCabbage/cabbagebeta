@@ -1,11 +1,14 @@
 package cyborgcabbage.cabbagebeta.gen.beta;
 
+import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.PrimitiveCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cyborgcabbage.cabbagebeta.CabbageBeta;
+import cyborgcabbage.cabbagebeta.gen.BetaPreset;
 import cyborgcabbage.cabbagebeta.gen.BetaProperties;
-import cyborgcabbage.cabbagebeta.gen.MyNoisePos;
+import cyborgcabbage.cabbagebeta.gen.FeaturesProperty;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomes;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomesSampler;
@@ -23,9 +26,11 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureSet;
 import net.minecraft.structure.StructureTemplateManager;
+import net.minecraft.util.Util;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.*;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
@@ -34,6 +39,8 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkSection;
+import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.StructureAccessor;
@@ -43,29 +50,32 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.gen.structure.Structure;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvider {
+    private static <T> RecordCodecBuilder<BetaChunkGenerator, T> betaPropertyCodec(PrimitiveCodec<T> codec, String name, Function<BetaProperties, T> function) {
+        return codec.fieldOf(name).orElse(function.apply(BetaPreset.FAITHFUL.getProperties())).forGetter(b -> function.apply(b.prop));
+    }
+
     public static final Codec<BetaChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryOps.createRegistryCodec(Registry.STRUCTURE_SET_KEY).forGetter(chunkGenerator -> chunkGenerator.structureSetRegistry),
             RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry),
-            Codec.INT.fieldOf("generation_height").orElse(2).forGetter(b -> b.prop.generationHeight()),
-            Codec.INT.fieldOf("sea_level").orElse(64).forGetter(b -> b.prop.seaLevel()),
-            Codec.FLOAT.fieldOf("factor").orElse(12.0f).forGetter(b -> b.prop.factor()),
-            Codec.INT.fieldOf("ground_level").orElse(68).forGetter(b -> b.prop.groundLevel()),
-            Codec.INT.fieldOf("cave_lava_level").orElse(10).forGetter(b -> b.prop.caveLavaLevel()),
-            Codec.FLOAT.fieldOf("mixing").orElse(1.0f).forGetter(b -> b.prop.mixing()),
-            Codec.BOOL.fieldOf("fixes").orElse(false).forGetter(b -> b.prop.fixes()),
-            Codec.BOOL.fieldOf("substitute_biomes").orElse(false).forGetter(b -> b.prop.substituteBiomes()),
-            Codec.INT.fieldOf("cave_rarity").orElse(15).forGetter(b -> b.prop.caveRarity()),
-            Codec.FLOAT.fieldOf("decliff").orElse(0.f).forGetter(b -> b.prop.decliff()),
-            Codec.FLOAT.fieldOf("world_scale").orElse(1.f).forGetter(b -> b.prop.worldScale()),
-            Codec.FLOAT.fieldOf("ore_range_scale").orElse(1.f).forGetter(b -> b.prop.oreRangeScale())
+            betaPropertyCodec(Codec.INT, "generation_height", BetaProperties::generationHeight),
+            betaPropertyCodec(Codec.INT, "sea_level", BetaProperties::seaLevel),
+            betaPropertyCodec(Codec.FLOAT, "factor", BetaProperties::factor),
+            betaPropertyCodec(Codec.INT, "ground_level", BetaProperties::groundLevel),
+            betaPropertyCodec(Codec.INT, "cave_lava_level", BetaProperties::caveLavaLevel),
+            betaPropertyCodec(Codec.FLOAT, "mixing", BetaProperties::mixing),
+            betaPropertyCodec(Codec.BOOL, "fixes", BetaProperties::fixes),
+            betaPropertyCodec(Codec.INT, "features", b -> b.features().getId()),
+            betaPropertyCodec(Codec.INT, "cave_rarity", BetaProperties::caveRarity),
+            betaPropertyCodec(Codec.FLOAT, "decliff", BetaProperties::decliff),
+            betaPropertyCodec(Codec.FLOAT, "world_scale", BetaProperties::worldScale),
+            betaPropertyCodec(Codec.FLOAT, "ore_range_scale", BetaProperties::oreRangeScale),
+            betaPropertyCodec(Codec.BOOL, "extended", BetaProperties::extended)
     ).apply(instance, instance.stable(BetaChunkGenerator::new)));
     private final Registry<Biome> biomeRegistry;
 
@@ -77,21 +87,6 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     private NoiseGeneratorOctaves noise10a;
     private NoiseGeneratorOctaves noise16c;
     private NoiseGeneratorOctaves treeNoise;
-    private double[] terrainNoiseValues;
-    private double[] sandNoise = new double[256];
-    private double[] gravelNoise = new double[256];
-    private double[] stoneNoise = new double[256];
-    double[] highFreq3d8;
-    double[] lowFreq3d16a;
-    double[] lowFreq3d16b;
-    double[] highFreq2d10;
-    double[] lowFreq2d16;
-    double[] highFreq3d8s;
-    double[] lowFreq3d16as;
-    double[] lowFreq3d16bs;
-    double[] highFreq2d10s;
-    double[] lowFreq2d16s;
-    private double[] generatedTemperatures;
     final protected MapGenBase caveGen;
     private BetaBiomes terrainBiomes;
     private BetaBiomesSampler biomeSampler;
@@ -99,6 +94,8 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     protected Random rand;
     long worldSeed;
     private final AquiferSampler.FluidLevelSampler fluidLevelSampler;
+    private final BlockState defaultBlock = Blocks.STONE.getDefaultState();
+    private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
     protected void init(long seed){
         if(rand == null) {
@@ -117,15 +114,15 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         }
     }
 
-    public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, int generationHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, boolean substituteBiomes, int caveRarity, float decliff, float worldScale, float oreRangeScale) {
-        this(structureSetRegistry, biomeRegistry, new BetaProperties(generationHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, substituteBiomes, caveRarity, decliff, worldScale, oreRangeScale));
+    public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, int generationHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, int features, int caveRarity, float decliff, float worldScale, float oreRangeScale, boolean extended) {
+        this(structureSetRegistry, biomeRegistry, new BetaProperties(generationHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, FeaturesProperty.byId(features), caveRarity, decliff, worldScale, oreRangeScale, extended ));
     }
 
     public BetaChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, BetaProperties p) {
-        super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry, p.substituteBiomes()));
+        super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry, p.features() == FeaturesProperty.MODERN));
         this.biomeRegistry = biomeRegistry;
         this.prop = p;
-        this.caveGen = new MapGenCaves(p.caveLavaLevel(), getHeight(), p.caveRarity(), p.fixes());
+        this.caveGen = new MapGenCaves(p.caveLavaLevel(), getMinimumY(), getHeight(), p.caveRarity(), p.fixes());
         AquiferSampler.FluidLevel fluidLevel = new AquiferSampler.FluidLevel(prop.seaLevel(), Fluids.WATER.getDefaultState().getBlockState());
         fluidLevelSampler = (x,y,z) -> fluidLevel;
         if(biomeSource instanceof BetaOverworldBiomeSource bobs){
@@ -155,10 +152,6 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         return prop;
     }
 
-    public Registry<Biome> getBiomeRegistry() {
-        return this.biomeRegistry;
-    }
-
     @Override
     protected Codec<? extends ChunkGenerator> getCodec() {
         return CODEC;
@@ -171,7 +164,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
-        if(prop.substituteBiomes()) {
+        if(prop.features() == FeaturesProperty.MODERN) {
             super.generateFeatures(world, chunk, structureAccessor);
         }else{
             //BlockSand.fallInstantly = true;
@@ -250,14 +243,14 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
             generateFeature(context, new WorldGenLiquids(Blocks.WATER.getDefaultState()), 50, true, r -> r.nextInt(r.nextInt(getHeight() - 8) + 8));
             generateFeature(context, new WorldGenLiquids(Blocks.LAVA.getDefaultState()), 20, true, r -> r.nextInt(r.nextInt(r.nextInt(getHeight() - 16) + 8) + 8));
 
-            this.generatedTemperatures = terrainBiomes.getTemperatures(this.generatedTemperatures, chunkX + 8, chunkZ + 8, 16, 16);
+            double[] generatedTemperatures = terrainBiomes.getTemperatures(null, chunkX + 8, chunkZ + 8, 16, 16);
 
             for (int x = chunkX + 8; x < chunkX + 8 + 16; ++x) {
                 for (int z = chunkZ + 8; z < chunkZ + 8 + 16; ++z) {
                     int relX = x - (chunkX + 8);
                     int relZ = z - (chunkZ + 8);
                     int surfaceY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-                    double temperature = this.generatedTemperatures[relX * 16 + relZ] - (double) (surfaceY - prop.seaLevel()) / 64.0D * 0.3d * prop.worldScale();
+                    double temperature = generatedTemperatures[relX * 16 + relZ] - (double) (surfaceY - prop.seaLevel()) / 64.0D * 0.3d * prop.worldScale();
                     BlockPos.Mutable blockPosTop = new BlockPos.Mutable(x, surfaceY, z);
                     BlockState stateBelow = world.getBlockState(blockPosTop.down());
                     if (temperature < 0.5D && surfaceY > 0 && surfaceY < getHeight() && world.isAir(blockPosTop) && stateBelow.getMaterial().isSolid() && stateBelow.getMaterial() != Material.ICE) {
@@ -338,7 +331,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
-        if(prop.substituteBiomes()){
+        if(prop.features() == FeaturesProperty.MODERN){
             if (SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                 return;
             }
@@ -348,14 +341,17 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
             ChunkPos pos = chunk.getPos();
             BiomeAccess biomeAccess = region.getBiomeAccess();
             double scale = 8.0D / 256D * prop.worldScale();
+            double[] sandNoise;
+            double[] gravelNoise;
+            double[] stoneNoise;
             if (prop.fixes()) {
-                this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale, 1, scale);
-                this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
-                this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale * 2.0D, scale * 2.0D, scale * 2.0D);
+                sandNoise = this.noise4a.generateNoiseOctaves(null, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale, 1, scale);
+                gravelNoise = this.noise4a.generateNoiseOctaves(null, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
+                stoneNoise = this.noise4b.generateNoiseOctaves(null, pos.x * 16, 0.0D, pos.z * 16, 16, 1, 16, scale * 2.0D, scale * 2.0D, scale * 2.0D);
             } else {
-                this.sandNoise = this.noise4a.generateNoiseOctaves(this.sandNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale, scale, 1.0D);
-                this.gravelNoise = this.noise4a.generateNoiseOctaves(this.gravelNoise, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
-                this.stoneNoise = this.noise4b.generateNoiseOctaves(this.stoneNoise, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale * 2.0D, scale * 2.0D, scale * 2.0D);
+                sandNoise = this.noise4a.generateNoiseOctaves(null, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale, scale, 1.0D);
+                gravelNoise = this.noise4a.generateNoiseOctaves(null, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, scale, 1.0D, scale);
+                stoneNoise = this.noise4b.generateNoiseOctaves(null, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, scale * 2.0D, scale * 2.0D, scale * 2.0D);
             }
             BlockPos.Mutable chunkBlockPos = new BlockPos.Mutable(0, 0, 0);
             BlockPos.Mutable worldBlockPos = new BlockPos.Mutable(0, getHeight() - 1, 0);
@@ -374,9 +370,9 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                     }
                     if (biome == null) biome = biomeSampler.getBiomeAtBlock(x + pos.x * 16, z + pos.z * 16);
 
-                    boolean sand = this.sandNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 0.0D;
-                    boolean gravel = this.gravelNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 3.0D;
-                    int stone = (int) (this.stoneNoise[z + x * 16] / 3.0D + 3.0D + this.rand.nextDouble() * 0.25D);
+                    boolean sand = sandNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 0.0D;
+                    boolean gravel = gravelNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 3.0D;
+                    int stone = (int) (stoneNoise[z + x * 16] / 3.0D + 3.0D + this.rand.nextDouble() * 0.25D);
                     int i14 = -1;
                     BlockState topBlock = biome.topBlock;
                     BlockState fillerBlock = biome.fillerBlock;
@@ -448,7 +444,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         ChunkPos chunkPos = chunk.getPos();
         int i = 16 / generationShapeConfig.horizontalBlockSize();
         return new BetaChunkNoiseSampler(
-                i, noiseConfig, chunkPos.getStartX(), chunkPos.getStartZ(), generationShapeConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), getOverworldSettings(), fluidLevelSampler, blender
+                i, noiseConfig, chunkPos.getStartX(), chunkPos.getStartZ(), generationShapeConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), getOverworldSettings(), fluidLevelSampler, blender, this
         );
     }
 
@@ -463,103 +459,344 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public int getWorldHeight() {
-        return 256;
+        return prop.extended() ? 384 : 256;
     }
 
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        var pos = chunk.getPos();
-        StructureWeightSampler weightSampler = StructureWeightSampler.createStructureWeightSampler(structureAccessor, pos);
-        MyNoisePos beardPos = new MyNoisePos();
+        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk.getHeightLimitView());
+        int i = generationShapeConfig.minimumY();
+        int j = MathHelper.floorDiv(i, generationShapeConfig.verticalBlockSize());
+        int k = MathHelper.floorDiv(generationShapeConfig.height(), generationShapeConfig.verticalBlockSize());
+        if (k <= 0) {
+            return CompletableFuture.completedFuture(chunk);
+        } else {
+            int l = chunk.getSectionIndex(k * generationShapeConfig.verticalBlockSize() - 1 + i);
+            int m = chunk.getSectionIndex(i);
+            Set<ChunkSection> set = Sets.<ChunkSection>newHashSet();
+
+            for(int n = l; n >= m; --n) {
+                ChunkSection chunkSection = chunk.getSection(n);
+                chunkSection.lock();
+                set.add(chunkSection);
+            }
+
+            return CompletableFuture.supplyAsync(
+                            Util.debugSupplier("wgen_fill_noise", () -> this.populateNoise(blender, structureAccessor, noiseConfig, chunk, j, k)), Util.getMainWorkerExecutor()
+                    )
+                    .whenCompleteAsync((chunkx, throwable) -> {
+                        for(ChunkSection chunkSectionx : set) {
+                            chunkSectionx.unlock();
+                        }
+                    }, executor);
+        }
+    }
+
+    private Chunk populateNoise(Blender blender, StructureAccessor structureAccessor, NoiseConfig noiseConfig, Chunk chunk, int minimumCellY, int cellHeight) {
+        ChunkNoiseSampler chunkNoiseSampler = chunk.getOrCreateChunkNoiseSampler(
+                chunkx -> this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig)
+        );
+        AquiferSampler aquiferSampler = chunkNoiseSampler.getAquiferSampler();
+
+        Heightmap oceanFloor = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
+        Heightmap worldSurface = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
+        ChunkPos pos = chunk.getPos();
+        int chunkBlockX = pos.getStartX();
+        int chunkBlockZ = pos.getStartZ();
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk);
+        int hSize = generationShapeConfig.horizontalBlockSize();
+        int vSize = generationShapeConfig.verticalBlockSize();
+        final int cellCountX = 16 / hSize;
+        final int cellCountZ = 16 / hSize;
         this.rand.setSeed((long) pos.x * 341873128712L + (long) pos.z * 132897987541L);
-        this.terrainBiomes.biomes = terrainBiomes.generateBiomes(this.terrainBiomes.biomes, pos.x * 16, pos.z * 16, 16, 16);
         int horizontalNoiseSize = 4;
         int xNoiseSize = horizontalNoiseSize + 1;
         int yNoiseSize = getHeight()/8+1;
         int zNoiseSize = horizontalNoiseSize + 1;
-        this.terrainNoiseValues = this.generateTerrainNoise(this.terrainNoiseValues, pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize);
-        BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
-        for(int xNoiseIndex = 0; xNoiseIndex < horizontalNoiseSize; ++xNoiseIndex) {
-            for(int zNoiseIndex = 0; zNoiseIndex < horizontalNoiseSize; ++zNoiseIndex) {
-                for(int yNoiseIndex = 0; yNoiseIndex < getHeight()/8; ++yNoiseIndex) {
-                    double yFrac = 0.125D;
-                    double v000 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v010 = this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v100 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 0];
-                    double v110 = this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 0];
-                    double v001 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v000) * yFrac;
-                    double v011 = (this.terrainNoiseValues[((xNoiseIndex + 0) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v010) * yFrac;
-                    double v101 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 0) * yNoiseSize + yNoiseIndex + 1] - v100) * yFrac;
-                    double v111 = (this.terrainNoiseValues[((xNoiseIndex + 1) * zNoiseSize + zNoiseIndex + 1) * yNoiseSize + yNoiseIndex + 1] - v110) * yFrac;
-                    for(int ySub = 0; ySub < 8; ++ySub) {
-                        blockPos.setY(yNoiseIndex * 8 + ySub);
-                        beardPos.y = yNoiseIndex * 8 + ySub;
-                        double xFrac = 0.25D;
-                        double d35 = v000;
-                        double d37 = v010;
-                        double d39 = (v100 - v000) * xFrac;
-                        double d41 = (v110 - v010) * xFrac;
-
-                        for(int xSub = 0; xSub < 4; ++xSub) {
-                            blockPos.setX(xNoiseIndex * 4 + xSub);
-                            beardPos.x = xNoiseIndex * 4 + xSub;
-                            double zFrac = 0.25D;
-                            double density = d35;
-                            double zNoiseStep = (d37 - d35) * zFrac;
-
-                            for(int zSub = 0; zSub < 4; ++zSub) {
-                                blockPos.setZ(zNoiseIndex * 4 + zSub);
-                                beardPos.z = zNoiseIndex * 4 + zSub;
-                                double d53 = terrainBiomes.temperature[(xNoiseIndex * 4 + xSub) * 16 + zNoiseIndex * 4 + zSub];
-                                Block blockState = Blocks.AIR;
-                                if(yNoiseIndex * 8 + ySub < prop.seaLevel()) {
-                                    if(d53 < 0.5D && yNoiseIndex * 8 + ySub >= prop.seaLevel() - 1) {
-                                        blockState = Blocks.ICE;
-                                    } else {
-                                        blockState = Blocks.WATER;
-                                    }
-                                }
-                                double value = weightSampler.sample(beardPos);
-                                if(value == 0.0) {
-                                    if (density > 0.0D) {
-                                        blockState = Blocks.STONE;
-                                    }
-                                }else{
-                                    if(value > 0) {
-                                        blockState = Blocks.STONE;
-                                    }
-                                }
-                                chunk.setBlockState(blockPos, blockState.getDefaultState(), false);
-                                density += zNoiseStep;
-                            }
-                            d35 += d39;
-                            d37 += d41;
-                        }
+        double[] terrainNoise = this.generateTerrainNoise(pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize, pos.x*16, pos.z*16);
+        cellHeight = Math.min(cellHeight, yNoiseSize - 1);
+        chunkNoiseSampler.sampleStartNoise();
+        if(prop.features() == FeaturesProperty.MODERN) {
+            for (int cellX = 0; cellX < cellCountX; ++cellX) {
+                chunkNoiseSampler.sampleEndNoise(cellX);
+                for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
+                    ChunkSection chunkSection = chunk.getSection(chunk.countVerticalSections() - 1);
+                    for (int cellY = cellHeight - 1; cellY >= 0; --cellY) {
+                        chunkNoiseSampler.sampleNoiseCorners(cellY, cellZ);
+                        double yFrac = 0.125D;
+                        double v000 = terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 1];
+                        double v010 = terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 1];
+                        double v100 = terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 1];
+                        double v110 = terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 1];
+                        double v001 = (terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 0] - v000) * yFrac;
+                        double v011 = (terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 0] - v010) * yFrac;
+                        double v101 = (terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 0] - v100) * yFrac;
+                        double v111 = (terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 0] - v110) * yFrac;
                         v000 += v001;
                         v010 += v011;
                         v100 += v101;
                         v110 += v111;
+                        for (int subY = vSize - 1; subY >= 0; --subY) {
+                            int blockY = cellY * vSize + subY;
+                            int sectionY = blockY & 15;
+                            int sectionIndex = chunk.getSectionIndex(blockY);
+                            if (chunk.getSectionIndex(chunkSection.getYOffset()) != sectionIndex) {
+                                chunkSection = chunk.getSection(sectionIndex);
+                            }
+                            double cellDeltaY = (double) subY / (double) vSize;
+                            chunkNoiseSampler.sampleNoiseY(blockY, cellDeltaY);
+                            double xFrac = 0.25D;
+                            double d35 = v000;
+                            double d37 = v010;
+                            double d39 = (v100 - v000) * xFrac;
+                            double d41 = (v110 - v010) * xFrac;
+                            for (int subX = 0; subX < hSize; ++subX) {
+                                int blockX = chunkBlockX + cellX * hSize + subX;
+                                int sectionX = blockX & 15;
+                                double cellDeltaX = (double) subX / (double) hSize;
+                                chunkNoiseSampler.sampleNoiseX(blockX, cellDeltaX);
+                                double zFrac = 0.25D;
+                                double density = d35;
+                                double zNoiseStep = (d37 - d35) * zFrac;
+                                for (int subZ = 0; subZ < hSize; ++subZ) {
+                                    int blockZ = chunkBlockZ + cellZ * hSize + subZ;
+                                    int sectionZ = blockZ & 15;
+                                    double cellDeltaZ = (double) subZ / (double) hSize;
+                                    chunkNoiseSampler.sampleNoiseZ(blockZ, cellDeltaZ);
+                                    double sumDensity = ((BetaChunkNoiseSampler) chunkNoiseSampler).sampleBeard();
+                                    sumDensity += density * 0.01f;
+                                    BlockState blockState;
+                                    if (sumDensity > 0.0) {
+                                        blockState = this.defaultBlock;
+                                    } else if (blockY < prop.seaLevel()) {
+                                        double temperature = biomeSampler.getTemperatureAtBlock(blockX, blockZ);
+                                        if (temperature < 0.5D && blockY >= prop.seaLevel() - 1) {
+                                            blockState = Blocks.ICE.getDefaultState();
+                                        } else {
+                                            blockState = Blocks.WATER.getDefaultState();
+                                        }
+                                    } else {
+                                        blockState = AIR;
+                                    }
+                                    if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                        if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
+                                            mutable.set(blockX, blockY, blockZ);
+                                            ((ProtoChunk) chunk).addLightSource(mutable);
+                                        }
+                                        chunkSection.setBlockState(sectionX, sectionY, sectionZ, blockState, false);
+                                        oceanFloor.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                        worldSurface.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                        if (aquiferSampler.needsFluidTick() && !blockState.getFluidState().isEmpty()) {
+                                            mutable.set(blockX, blockY, blockZ);
+                                            chunk.markBlockForPostProcessing(mutable);
+                                        }
+                                    }
+                                    density += zNoiseStep;
+                                }
+                                d35 += d39;
+                                d37 += d41;
+                            }
+                            v000 += v001;
+                            v010 += v011;
+                            v100 += v101;
+                            v110 += v111;
+                        }
+                    }
+                }
+                chunkNoiseSampler.swapBuffers();
+            }
+
+        }else{
+            for (int cellX = 0; cellX < cellCountX; ++cellX) {
+                for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
+                    ChunkSection chunkSection = chunk.getSection(chunk.countVerticalSections() - 1);
+                    for (int cellY = cellHeight - 1; cellY >= 0; --cellY) {
+                        double yFrac = 0.125D;
+                        double v000 = terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 1];
+                        double v010 = terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 1];
+                        double v100 = terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 1];
+                        double v110 = terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 1];
+                        double v001 = (terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 0] - v000) * yFrac;
+                        double v011 = (terrainNoise[((cellX + 0) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 0] - v010) * yFrac;
+                        double v101 = (terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 0) * yNoiseSize + cellY + 0] - v100) * yFrac;
+                        double v111 = (terrainNoise[((cellX + 1) * xNoiseSize + cellZ + 1) * yNoiseSize + cellY + 0] - v110) * yFrac;
+                        v000 += v001;
+                        v010 += v011;
+                        v100 += v101;
+                        v110 += v111;
+                        for (int subY = vSize - 1; subY >= 0; --subY) {
+                            int blockY = cellY * vSize + subY;
+                            int sectionY = blockY & 15;
+                            int sectionIndex = chunk.getSectionIndex(blockY);
+                            if (chunk.getSectionIndex(chunkSection.getYOffset()) != sectionIndex) {
+                                chunkSection = chunk.getSection(sectionIndex);
+                            }
+                            double xFrac = 0.25D;
+                            double d35 = v000;
+                            double d37 = v010;
+                            double d39 = (v100 - v000) * xFrac;
+                            double d41 = (v110 - v010) * xFrac;
+                            for (int subX = 0; subX < hSize; ++subX) {
+                                int blockX = chunkBlockX + cellX * hSize + subX;
+                                int sectionX = blockX & 15;
+                                double zFrac = 0.25D;
+                                double density = d35;
+                                double zNoiseStep = (d37 - d35) * zFrac;
+                                for (int subZ = 0; subZ < hSize; ++subZ) {
+                                    int blockZ = chunkBlockZ + cellZ * hSize + subZ;
+                                    int sectionZ = blockZ & 15;
+                                    BlockState blockState;
+                                    if (density > 0.0) {
+                                        blockState = this.defaultBlock;
+                                    } else if (blockY < prop.seaLevel()) {
+                                        double temperature = biomeSampler.getTemperatureAtBlock(blockX, blockZ);
+                                        if (temperature < 0.5D && blockY >= prop.seaLevel() - 1) {
+                                            blockState = Blocks.ICE.getDefaultState();
+                                        } else {
+                                            blockState = Blocks.WATER.getDefaultState();
+                                        }
+                                    } else {
+                                        blockState = AIR;
+                                    }
+                                    if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                        if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
+                                            mutable.set(blockX, blockY, blockZ);
+                                            ((ProtoChunk) chunk).addLightSource(mutable);
+                                        }
+                                        chunkSection.setBlockState(sectionX, sectionY, sectionZ, blockState, false);
+                                        oceanFloor.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                        worldSurface.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                        if (aquiferSampler.needsFluidTick() && !blockState.getFluidState().isEmpty()) {
+                                            mutable.set(blockX, blockY, blockZ);
+                                            chunk.markBlockForPostProcessing(mutable);
+                                        }
+                                    }
+                                    density += zNoiseStep;
+                                }
+                                d35 += d39;
+                                d37 += d41;
+                            }
+                            v000 += v001;
+                            v010 += v011;
+                            v100 += v101;
+                            v110 += v111;
+                        }
                     }
                 }
             }
         }
-        return CompletableFuture.completedFuture(chunk);
+        chunkNoiseSampler.stopInterpolation();
+        chunkNoiseSampler.sampleStartNoise();
+        if(prop.extended()) {
+            if(prop.features() == FeaturesProperty.MODERN) {
+                for (int cellX = 0; cellX < cellCountX; ++cellX) {
+                    chunkNoiseSampler.sampleEndNoise(cellX);
+                    for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
+                        ChunkSection chunkSection = chunk.getSection(chunk.getSectionIndex(-1));
+                        for (int cellY = 64 / vSize - 1; cellY >= 0; --cellY) {
+                            chunkNoiseSampler.sampleNoiseCorners(cellY, cellZ);
+                            for (int subY = vSize - 1; subY >= 0; --subY) {
+                                int blockY = (minimumCellY + cellY) * vSize + subY;
+                                int sectionY = blockY & 15;
+                                int sectionIndex = chunk.getSectionIndex(blockY);
+                                if (chunk.getSectionIndex(chunkSection.getYOffset()) != sectionIndex) {
+                                    chunkSection = chunk.getSection(sectionIndex);
+                                }
+                                double cellDeltaY = (double) subY / (double) vSize;
+                                chunkNoiseSampler.sampleNoiseY(blockY, cellDeltaY);
+                                for (int subX = 0; subX < hSize; ++subX) {
+                                    int blockX = chunkBlockX + cellX * hSize + subX;
+                                    int sectionX = blockX & 15;
+                                    double cellDeltaX = (double) subX / (double) hSize;
+                                    chunkNoiseSampler.sampleNoiseX(blockX, cellDeltaX);
+                                    for (int subZ = 0; subZ < hSize; ++subZ) {
+                                        int blockZ = chunkBlockZ + cellZ * hSize + subZ;
+                                        int sectionZ = blockZ & 15;
+                                        double cellDeltaZ = (double) subZ / (double) hSize;
+                                        chunkNoiseSampler.sampleNoiseZ(blockZ, cellDeltaZ);
+                                        double density = ((BetaChunkNoiseSampler) chunkNoiseSampler).sampleBeard()+1.0f;
+                                        BlockState blockState;
+                                        if (density > 0.0) {
+                                            blockState = this.defaultBlock;
+                                        } else if (blockY < prop.seaLevel()) {
+                                            double temperature = biomeSampler.getTemperatureAtBlock(blockX, blockZ);
+                                            if (temperature < 0.5D && blockY >= prop.seaLevel() - 1) {
+                                                blockState = Blocks.ICE.getDefaultState();
+                                            } else {
+                                                blockState = Blocks.WATER.getDefaultState();
+                                            }
+                                        } else {
+                                            blockState = AIR;
+                                        }
+                                        if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                            if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
+                                                mutable.set(blockX, blockY, blockZ);
+                                                ((ProtoChunk) chunk).addLightSource(mutable);
+                                            }
+                                            chunkSection.setBlockState(sectionX, sectionY, sectionZ, blockState, false);
+                                            oceanFloor.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                            worldSurface.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                            if (aquiferSampler.needsFluidTick() && !blockState.getFluidState().isEmpty()) {
+                                                mutable.set(blockX, blockY, blockZ);
+                                                chunk.markBlockForPostProcessing(mutable);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    chunkNoiseSampler.swapBuffers();
+                }
+
+            }else{
+                for (int cellX = 0; cellX < cellCountX; ++cellX) {
+                    for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
+                        ChunkSection chunkSection = chunk.getSection(chunk.getSectionIndex(-1));
+                        for (int cellY = 64 / vSize - 1; cellY >= 0; --cellY) {
+                            for (int subY = vSize - 1; subY >= 0; --subY) {
+                                int blockY = (minimumCellY + cellY) * vSize + subY;
+                                int sectionY = blockY & 15;
+                                int sectionIndex = chunk.getSectionIndex(blockY);
+                                if (chunk.getSectionIndex(chunkSection.getYOffset()) != sectionIndex) {
+                                    chunkSection = chunk.getSection(sectionIndex);
+                                }
+                                for (int subX = 0; subX < hSize; ++subX) {
+                                    int blockX = chunkBlockX + cellX * hSize + subX;
+                                    int sectionX = blockX & 15;
+                                    for (int subZ = 0; subZ < hSize; ++subZ) {
+                                        int blockZ = chunkBlockZ + cellZ * hSize + subZ;
+                                        int sectionZ = blockZ & 15;
+                                        BlockState blockState = this.defaultBlock;
+                                        if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                            chunkSection.setBlockState(sectionX, sectionY, sectionZ, blockState, false);
+                                            oceanFloor.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                            worldSurface.trackUpdate(sectionX, blockY, sectionZ, blockState);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        chunkNoiseSampler.stopInterpolation();
+        return chunk;
     }
 
-    private double[] generateTerrainNoise(double[] noiseArray, int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize) {
-        if(noiseArray == null) {
-            noiseArray = new double[xNoiseSize * yNoiseSize * zNoiseSize];
-        }
+    private double[] generateTerrainNoise(int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize, int blockX, int blockZ) {
+        double[] noiseArray = new double[xNoiseSize * yNoiseSize * zNoiseSize];
+
 
         double hScale = 684.412d;
         double vScale = 684.412d;
-        double[] temp = this.terrainBiomes.temperature;
-        double[] humidity = this.terrainBiomes.humidity;
-        this.highFreq2d10 = this.noise10a.func_4109_a(this.highFreq2d10, xOffset, zOffset, xNoiseSize, zNoiseSize, 1.121D*prop.worldScale(), 1.121D*prop.worldScale(), 0.5D);
-        this.lowFreq2d16 = this.noise16c.func_4109_a(this.lowFreq2d16, xOffset, zOffset, xNoiseSize, zNoiseSize, 200.0D*prop.worldScale(), 200.0D*prop.worldScale(), 0.5D);
-        this.highFreq3d8 = this.noise8a.generateNoiseOctaves(this.highFreq3d8, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale / 80.0D*prop.worldScale(), vScale / 160.0D*prop.worldScale(), hScale / 80.0D*prop.worldScale());
-        this.lowFreq3d16a = this.noise16a.generateNoiseOctaves(this.lowFreq3d16a, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
-        this.lowFreq3d16b = this.noise16b.generateNoiseOctaves(this.lowFreq3d16b, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        double[] highFreq2d10 = this.noise10a.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 1.121D*prop.worldScale(), 1.121D*prop.worldScale(), 0.5D);
+        double[] lowFreq2d16 = this.noise16c.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 200.0D*prop.worldScale(), 200.0D*prop.worldScale(), 0.5D);
+        double[] highFreq3d8 = this.noise8a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale / 80.0D*prop.worldScale(), vScale / 160.0D*prop.worldScale(), hScale / 80.0D*prop.worldScale());
+        double[] lowFreq3d16a = this.noise16a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        double[] lowFreq3d16b = this.noise16b.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
         int noiseIndex = 0;
         int noiseIndex2 = 0;
         int samplePeriod = 16 / xNoiseSize;
@@ -581,19 +818,19 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                 }else{
                     zSample = zNoiseIndex * samplePeriod + samplePeriod / 2;
                 }
-                double tempVal = temp[xSample * 16 + zSample];
-                double humidityVal = humidity[xSample * 16 + zSample] * tempVal;
+                double tempVal = biomeSampler.getTemperatureAtBlock(xSample + blockX,zSample + blockZ);
+                double humidityVal = biomeSampler.getHumidityAtBlock(xSample + blockX,zSample + blockZ) * tempVal;
                 humidityVal = 1.0D - humidityVal;
                 humidityVal *= humidityVal;
                 humidityVal *= humidityVal;
                 humidityVal = 1.0D - humidityVal;
-                double highFreqHumid = (this.highFreq2d10[noiseIndex2] + 256.0D) / 512.0D;
+                double highFreqHumid = (highFreq2d10[noiseIndex2] + 256.0D) / 512.0D;
                 highFreqHumid *= humidityVal;
                 if(highFreqHumid > 1.0D) {
                     highFreqHumid = 1.0D;
                 }
 
-                double lowFreq2d3 = this.lowFreq2d16[noiseIndex2] / 8000.0D;
+                double lowFreq2d3 = lowFreq2d16[noiseIndex2] / 8000.0D;
                 if(lowFreq2d3 < 0.0D) {
                     lowFreq2d3 = -lowFreq2d3 * 0.3d;
                 }
@@ -639,9 +876,9 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                         bias *= 4.0D;
                     }
 
-                    double a = this.lowFreq3d16a[noiseIndex] / 512.0D;
-                    double b = this.lowFreq3d16b[noiseIndex] / 512.0D;
-                    double mix = this.highFreq3d8[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
+                    double a = lowFreq3d16a[noiseIndex] / 512.0D;
+                    double b = lowFreq3d16b[noiseIndex] / 512.0D;
+                    double mix = highFreq3d8[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
                     double noiseValue;
                     if(mix < 0.0D) {
                         noiseValue = a;
@@ -666,7 +903,7 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         return noiseArray;
     }
 
-    private double[] generateTerrainNoiseColumn(double[] noiseArray, double xOffset, double yOffset, double zOffset, int yNoiseSize) {
+    public double[] generateTerrainNoiseColumn(double[] noiseArray, double xOffset, double yOffset, double zOffset, int yNoiseSize) {
         if(noiseArray == null) {
             noiseArray = new double[yNoiseSize];
         }
@@ -676,24 +913,24 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
         double temp = this.biomeSampler.getTemperatureAtBlock((int)(xOffset*4), (int)(zOffset*4));
         double humidity = this.biomeSampler.getHumidityAtBlock((int)(xOffset*4), (int)(zOffset*4));
 
-        this.highFreq2d10s = this.noise10a.generateNoiseOctaves(this.highFreq2d10s, xOffset, 10.0D, zOffset, 1, 1, 1, 1.121D*prop.worldScale(), 1.0D, 1.121D*prop.worldScale());
-        this.lowFreq2d16s = this.noise16c.generateNoiseOctaves(this.lowFreq2d16s, xOffset, 10.0D, zOffset, 1, 1, 1, 200.0D*prop.worldScale(), 1.0D, 200.0D*prop.worldScale());
-        this.highFreq3d8s = this.noise8a.generateNoiseOctaves(this.highFreq3d8s, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale / 80.0D*prop.worldScale(), vScale / 160.0D*prop.worldScale(), hScale / 80.0D*prop.worldScale());
-        this.lowFreq3d16as = this.noise16a.generateNoiseOctaves(this.lowFreq3d16as, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
-        this.lowFreq3d16bs = this.noise16b.generateNoiseOctaves(this.lowFreq3d16bs, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        double[] highFreq2d10s = this.noise10a.generateNoiseOctaves(null, xOffset, 10.0D, zOffset, 1, 1, 1, 1.121D*prop.worldScale(), 1.0D, 1.121D*prop.worldScale());
+        double[] lowFreq2d16s = this.noise16c.generateNoiseOctaves(null, xOffset, 10.0D, zOffset, 1, 1, 1, 200.0D*prop.worldScale(), 1.0D, 200.0D*prop.worldScale());
+        double[] highFreq3d8s = this.noise8a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale / 80.0D*prop.worldScale(), vScale / 160.0D*prop.worldScale(), hScale / 80.0D*prop.worldScale());
+        double[] lowFreq3d16as = this.noise16a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
+        double[] lowFreq3d16bs = this.noise16b.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale*prop.worldScale(), vScale*prop.worldScale(), hScale*prop.worldScale());
         int noiseIndex = 0;
         double humidityVal = humidity * temp;
         humidityVal = 1.0D - humidityVal;
         humidityVal *= humidityVal;
         humidityVal *= humidityVal;
         humidityVal = 1.0D - humidityVal;
-        double highFreqHumid = (this.highFreq2d10s[0] + 256.0D) / 512.0D;
+        double highFreqHumid = (highFreq2d10s[0] + 256.0D) / 512.0D;
         highFreqHumid *= humidityVal;
         if(highFreqHumid > 1.0D) {
             highFreqHumid = 1.0D;
         }
 
-        double lowFreq2d3 = this.lowFreq2d16s[0] / 8000.0D;
+        double lowFreq2d3 = lowFreq2d16s[0] / 8000.0D;
         if(lowFreq2d3 < 0.0D) {
             lowFreq2d3 = -lowFreq2d3 * 0.3d;
         }
@@ -737,9 +974,9 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
                 bias *= 4.0D;
             }
 
-            double a = this.lowFreq3d16as[noiseIndex] / 512.0D;
-            double b = this.lowFreq3d16bs[noiseIndex] / 512.0D;
-            double mix = this.highFreq3d8s[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
+            double a = lowFreq3d16as[noiseIndex] / 512.0D;
+            double b = lowFreq3d16bs[noiseIndex] / 512.0D;
+            double mix = highFreq3d8s[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
             double noiseValue;
             if(mix < 0.0D) {
                 noiseValue = a;
@@ -765,11 +1002,18 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
 
     @Override
     public int getMinimumY() {
-        return 0;
+        return prop.extended() ? -64 : 0;
     }
 
     @Override
     public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
+        return switch(heightmap) {
+            case WORLD_SURFACE_WG, WORLD_SURFACE -> Math.max(getSolidHeight(x, z, world), getSeaLevel());
+            case OCEAN_FLOOR_WG, OCEAN_FLOOR, MOTION_BLOCKING, MOTION_BLOCKING_NO_LEAVES -> getSolidHeight(x, z, world);
+        };
+    }
+
+    public int getSolidHeight(int x, int z, HeightLimitView world) {
         int yNoiseSize = getHeight()/8+1;
         double[] noise = generateTerrainNoiseColumn(null, x * 0.25, 0, z * 0.25, yNoiseSize);
         for (int i = noise.length-1; i > 0; i--) {
@@ -794,11 +1038,11 @@ public class BetaChunkGenerator extends ChunkGenerator implements BetaBiomeProvi
     }
 
     public int getHeight() {
-        return prop.generationHeight()*64;
+        return prop.generationHeight();
     }
 
     public float getHeightMultiplier() {
-        return prop.generationHeight() / 2.f;
+        return prop.generationHeight() / 128.f;
     }
 
     public BiomeGenBase getBiome(int x, int z) {

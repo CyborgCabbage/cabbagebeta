@@ -40,6 +40,7 @@ public class CabbageBeta implements ModInitializer {
 	public static Map<BiomeGenBase, RegistryKey<Biome>> BETA_TO_SUBSTITUTE_BIOME = new HashMap<>();
 	public static Map<RegistryKey<Biome>, BiomeGenBase> BIOME_TO_BETA_BIOME = new HashMap<>();
 
+	public static final RegistryKey<DimensionType> BETA_OVERWORLD_EXTENDED_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_overworld_extended"));
 	public static final RegistryKey<DimensionType> BETA_OVERWORLD_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_overworld"));
 	public static final RegistryKey<DimensionType> BETA_NETHER_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_nether"));
 
