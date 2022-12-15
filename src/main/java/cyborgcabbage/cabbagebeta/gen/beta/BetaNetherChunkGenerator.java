@@ -1,45 +1,54 @@
 package cyborgcabbage.cabbagebeta.gen.beta;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.PrimitiveCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import cyborgcabbage.cabbagebeta.CabbageBeta;
-import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
+import cyborgcabbage.cabbagebeta.gen.BetaNetherPreset;
+import cyborgcabbage.cabbagebeta.gen.BetaNetherProperties;
+import cyborgcabbage.cabbagebeta.gen.FeaturesProperty;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
-import cyborgcabbage.cabbagebeta.gen.beta.map.MapGenBase;
 import cyborgcabbage.cabbagebeta.gen.beta.map.MapGenCavesHell;
 import cyborgcabbage.cabbagebeta.gen.beta.noise.NoiseGeneratorOctaves;
 import cyborgcabbage.cabbagebeta.gen.beta.worldgen.*;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.structure.StructureSet;
-import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.Blender;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.VerticalBlockSample;
 import net.minecraft.world.gen.noise.NoiseConfig;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
-public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiomeProvider {
+public class BetaNetherChunkGenerator extends BetaChunkGenerator {
+    private static <T> RecordCodecBuilder<BetaNetherChunkGenerator, T> betaPropertyCodec(PrimitiveCodec<T> codec, String name, Function<BetaNetherProperties, T> function) {
+        return codec.fieldOf(name).orElse(function.apply(BetaNetherPreset.FAITHFUL.getProperties())).forGetter(b -> function.apply(b.prop));
+    }
     public static final Codec<BetaNetherChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryOps.createRegistryCodec(Registry.STRUCTURE_SET_KEY).forGetter(chunkGenerator -> chunkGenerator.structureSetRegistry),
-            RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry)
+            RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(generator -> generator.biomeRegistry),
+            betaPropertyCodec(Codec.INT, "generation_height", BetaNetherProperties::generationHeight),
+            betaPropertyCodec(Codec.INT, "ocean_level", BetaNetherProperties::oceanLevel),
+            betaPropertyCodec(Codec.FLOAT, "terrain_scale", BetaNetherProperties::terrainScale),
+            betaPropertyCodec(Codec.BOOL, "ceiling", BetaNetherProperties::ceiling)
     ).apply(instance, instance.stable(BetaNetherChunkGenerator::new)));
     private final Registry<Biome> biomeRegistry;
 
@@ -50,9 +59,8 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
     private NoiseGeneratorOctaves field_4165_m;
     public NoiseGeneratorOctaves field_4177_a;
     public NoiseGeneratorOctaves field_4176_b;
-    private final MapGenBase caveGen;
-    protected Random rand;
-    long worldSeed;
+    private final BetaNetherProperties prop;
+
 
     protected void init(long seed){
         if(rand == null) {
@@ -68,18 +76,23 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
         }
     }
 
-    public BetaNetherChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry) {
-        super(structureSetRegistry, Optional.empty(), new BetaOverworldBiomeSource(biomeRegistry, false));
+    public BetaNetherChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, int generationHeight, int oceanLevel, float terrainScale, boolean ceiling) {
+        this(structureSetRegistry, biomeRegistry, new BetaNetherProperties(generationHeight, oceanLevel, terrainScale, ceiling));
+    }
+
+    public BetaNetherChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, BetaNetherProperties netherProperties) {
+        super(structureSetRegistry, new BetaOverworldBiomeSource(biomeRegistry, FeaturesProperty.BETA));
         this.biomeRegistry = biomeRegistry;
         this.caveGen = new MapGenCavesHell();
         if(biomeSource instanceof BetaOverworldBiomeSource bobs){
             bobs.setGenerator(this);
         }
+        this.prop = netherProperties;
     }
 
-        @Override
+    @Override
     public int getSeaLevel() {
-        return 32;
+        return prop.oceanLevel();
     }
 
     public Registry<Biome> getBiomeRegistry() {
@@ -92,118 +105,20 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
     }
 
     @Override
-    public void carve(ChunkRegion chunkRegion, long seed, NoiseConfig noiseConfig, BiomeAccess biomeAccess, StructureAccessor structureAccessor, Chunk chunk, GenerationStep.Carver carverStep) {
-    }
-
-    @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
-        int i2 = chunk.getPos().x;
-        int i3 = chunk.getPos().z;
-        int blockX = i2 * 16;
-        int blockZ = i3 * 16;
-
-        for(int i = 0; i < 8; ++i) {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(120) + 4;
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenHellLava(Blocks.LAVA.getDefaultState())).generate(world, this.rand, x, y, z);
-        }
-
+        int chunkX = chunk.getPos().x;
+        int chunkZ = chunk.getPos().z;
+        int blockX = chunkX * 16;
+        int blockZ = chunkZ * 16;
+        WorldGeneratorContext context = new WorldGeneratorContext(world, blockX, blockZ);
+        generateFeature(context, new WorldGenHellLava(Blocks.LAVA.getDefaultState()), 8, true, r -> r.nextInt(getHeight()-8)+4);
         int fireCount = this.rand.nextInt(this.rand.nextInt(10) + 1) + 1;
-        for(int i = 0; i < fireCount; ++i) {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(120) + 4;
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenFire()).generate(world, this.rand, x, y, z);
-        }
-
+        generateFeature(context, new WorldGenFire(), fireCount, true, r -> r.nextInt(getHeight()-8)+4);
         int glowStoneCount = this.rand.nextInt(this.rand.nextInt(10) + 1);
-        for(int i = 0; i < glowStoneCount; ++i) {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(120) + 4;
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenGlowStone1()).generate(world, this.rand, x, y, z);
-        }
-
-        for(int i = 0; i < 10; ++i) {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(128);
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenGlowStone2()).generate(world, this.rand, x, y, z);
-        }
-
-        this.rand.nextInt(1);
-        {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(128);
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenFlowers(Blocks.BROWN_MUSHROOM.getDefaultState())).generate(world, this.rand, x, y, z);
-        }
-        this.rand.nextInt(1);
-        {
-            int x = blockX + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(128);
-            int z = blockZ + this.rand.nextInt(16) + 8;
-            (new WorldGenFlowers(Blocks.RED_MUSHROOM.getDefaultState())).generate(world, this.rand, x, y, z);
-        }
-    }
-
-    record WorldGeneratorContext(StructureWorldAccess world, int x, int z){}
-
-    private void generateFeature(WorldGeneratorContext context, WorldGenerator generator, int count, boolean offset) {
-        generateFeature(context, generator, count, offset, (r) -> r.nextInt(getHeight()));
-    }
-
-    private void generateFeature(WorldGeneratorContext context, WorldGenerator generator, int count, boolean offset, GenerateCoordinate generateCoordinate){
-        for(int r = 0; r < count; ++r) {
-            int x = context.x() + this.rand.nextInt(16) + (offset ? 8 : 0);
-            int y = generateCoordinate.gen(this.rand);
-            int z = context.z() + this.rand.nextInt(16) + (offset ? 8 : 0);
-            generator.generate(context.world(), this.rand, x, y, z);
-        }
-    }
-
-    interface GenerateCoordinate{
-        int gen(Random rand);
-    }
-
-    private void generateFeatureRare(WorldGeneratorContext context, WorldGenerator generator, int scarcity){
-        if(rand.nextInt(scarcity) == 0) {
-            int x = context.x() + this.rand.nextInt(16) + 8;
-            int y = this.rand.nextInt(getHeight());
-            int z = context.z() + this.rand.nextInt(16) + 8;
-            generator.generate(context.world(), this.rand, x, y, z);
-        }
-    }
-
-    private void generateMineable(WorldGeneratorContext context, BlockState block, int veinSize, int bound, int count){
-        for(int r = 0; r < count; ++r) {
-            int x = context.x() + this.rand.nextInt(16);
-            int y = this.rand.nextInt(bound);
-            int z = context.z() + this.rand.nextInt(16);
-            (new WorldGenMinable(block, veinSize)).generate(context.world(), this.rand, x, y, z);
-        }
-    }
-
-    private void generateMineableBinomial(WorldGeneratorContext context, BlockState block, int veinSize, int bound, int count){
-        for(int r = 0; r < count; ++r) {
-            int x = context.x() + this.rand.nextInt(16);
-            int y = this.rand.nextInt(bound)+this.rand.nextInt(bound);
-            int z = context.z() + this.rand.nextInt(16);
-            (new WorldGenMinable(block, veinSize)).generate(context.world(), this.rand, x, y, z);
-        }
-    }
-
-    @Override
-    public void setStructureStarts(DynamicRegistryManager registryManager, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk, StructureTemplateManager structureTemplateManager, long seed) {
-        init(seed);
-        super.setStructureStarts(registryManager, noiseConfig, structureAccessor, chunk, structureTemplateManager, seed);
-    }
-
-    @Override
-    public void addStructureReferences(StructureWorldAccess world, StructureAccessor structureAccessor, Chunk chunk) {
-        init(world.getSeed());
-        super.addStructureReferences(world, structureAccessor, chunk);
+        generateFeature(context, new WorldGenGlowStone1(), glowStoneCount, true, r -> r.nextInt(getHeight()-8)+4);
+        generateFeature(context, new WorldGenGlowStone2(), 10, true);
+        generateFeatureRare(context, new WorldGenFlowers(Blocks.BROWN_MUSHROOM.getDefaultState()), 1);
+        generateFeatureRare(context, new WorldGenFlowers(Blocks.RED_MUSHROOM.getDefaultState()), 1);
     }
 
     @Override
@@ -227,22 +142,20 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
         this.rand.setSeed((long)pos.x * 341873128712L + (long)pos.z * 132897987541L);
         this.generateTerrain(chunk);
         this.replaceBlocks(chunk);
-        this.caveGen.generate(chunk, worldSeed);
         return CompletableFuture.completedFuture(chunk);
     }
 
     public void generateTerrain(Chunk chunk) {
         ChunkPos pos = chunk.getPos();
         byte horizontalSize = 4;
-        byte lavaHeight = 32;
         int xSize = horizontalSize + 1;
-        byte ySize = 17;
+        int ySize = getHeight()/8+1;
         int zSize = horizontalSize + 1;
         double[] field_4163_o = this.generateTerrainNoise(null, pos.x * horizontalSize, 0, pos.z * horizontalSize, xSize, ySize, zSize);
         BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
         for(int xi = 0; xi < horizontalSize; ++xi) {
             for(int zi = 0; zi < horizontalSize; ++zi) {
-                for(int yi = 0; yi < 16; ++yi) {
+                for(int yi = 0; yi < ySize-1; ++yi) {
                     double d12 = 0.125D;
                     double d000 = field_4163_o[((xi + 0) * zSize + zi + 0) * ySize + yi + 0];
                     double d010 = field_4163_o[((xi + 0) * zSize + zi + 1) * ySize + yi + 0];
@@ -270,7 +183,7 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
                             for(int i50 = 0; i50 < 4; ++i50) {
                                 blockPos.setZ(zi * 4 + i50);
                                 BlockState blockState = Blocks.AIR.getDefaultState();
-                                if(yi * 8 + i30 < lavaHeight) {
+                                if(yi * 8 + i30 < prop.oceanLevel()) {
                                     blockState = Blocks.LAVA.getDefaultState();
                                 }
 
@@ -302,8 +215,8 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
             output = new double[xSize * ySize * zSize];
         }
 
-        double d8 = 684.412D;
-        double d10 = 2053.236D;
+        double d8 = 684.412D / prop.terrainScale();
+        double d10 = 2053.236D / prop.terrainScale();
         double[] mixingNoiseArray = this.mixingNoise.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8 / 80.0D, d10 / 60.0D, d8 / 80.0D);
         double[] terrainNoiseArrayA = this.terrainNoiseA.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8, d10, d8);
         double[] terrainNoiseArrayB = this.terrainNoiseB.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xSize, ySize, zSize, d8, d10, d8);
@@ -313,10 +226,12 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
         for(int yi = 0; yi < ySize; ++yi) {
             wave[yi] = Math.cos((double)yi * Math.PI * 6.0D / (double)ySize) * 2.0D;
             double d16 = yi;
-            if(yi > ySize / 2) {
-                d16 = ySize - 1 - yi;
+            if(prop.ceiling()){
+                if(yi > ySize / 2) {
+                    d16 = ySize - 1 - yi;
+                }
             }
-
+            d16 *= ySize / 17.0;
             if(d16 < 4.0D) {
                 d16 = 4.0D - d16;
                 wave[yi] -= d16 * d16 * d16 * 10.0D;
@@ -341,8 +256,8 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
 
                     noiseValue -= bias;
                     if(yi > ySize - 4) {
-                        double fallOff = (float)(yi - (ySize - 4)) / 3.0F;
-                        noiseValue = noiseValue * (1.0D - fallOff) + -10.0D * fallOff;
+                        double d44 = (float)(yi - (ySize - 4)) / 3.0F;
+                        noiseValue = noiseValue * (1.0D - d44) + -10.0D * d44;
                     }
 
                     output[index] = noiseValue;
@@ -357,9 +272,10 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
     public void replaceBlocks(Chunk chunk) {
         ChunkPos pos = chunk.getPos();
         byte b4 = 64;
-        double d5 = 8.0D / 256D;
-        double[] soulSandNoiseArray = this.field_4166_l.generateNoiseOctaves(null, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, d5, d5, 1.0D);
-        double[] gravelNoiseArray = this.field_4166_l.generateNoiseOctaves(null, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, d5, 1.0D, d5);
+        double d5 = 8.0D / 256D / prop.terrainScale();
+        double d9 = 1.0 / prop.terrainScale();
+        double[] soulSandNoiseArray = this.field_4166_l.generateNoiseOctaves(null, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, d5, d5, d9);
+        double[] gravelNoiseArray = this.field_4166_l.generateNoiseOctaves(null, pos.x * 16, 109.0134D, pos.z * 16, 16, 1, 16, d5, d9, d5);
         double[] field_4160_r = this.field_4165_m.generateNoiseOctaves(null, pos.x * 16, pos.z * 16, 0.0D, 16, 16, 1, d5 * 2.0D, d5 * 2.0D, d5 * 2.0D);
         BlockPos.Mutable blockPos = new BlockPos.Mutable(0, 0, 0);
         for(int h1 = 0; h1 < 16; ++h1) {
@@ -373,10 +289,10 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
                 BlockState topBlock = Blocks.NETHERRACK.getDefaultState();
                 BlockState fillerBlock = Blocks.NETHERRACK.getDefaultState();
 
-                for(int yBlock = 127; yBlock >= 0; --yBlock) {
+                for(int yBlock = getHeight() - 1; yBlock >= 0; --yBlock) {
                     blockPos.setY(yBlock);
                     BlockState block = null;
-                    if(yBlock >= 127 - this.rand.nextInt(5)) {
+                    if(yBlock >= (getHeight()-1) - this.rand.nextInt(5) && prop.ceiling()) {
                         block = Blocks.BEDROCK.getDefaultState();
                     } else if(yBlock <= this.rand.nextInt(5)) {
                         block = Blocks.BEDROCK.getDefaultState();
@@ -433,7 +349,7 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
 
     @Override
     public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
-        return 128;
+        return getHeight() / 2;
     }
 
     @Override
@@ -446,10 +362,23 @@ public class BetaNetherChunkGenerator extends ChunkGenerator implements BetaBiom
     }
 
     public int getHeight(){
-        return 128;
+        return prop.generationHeight();
+    }
+
+    @Override
+    public float getHeightMultiplier() {
+        return prop.generationHeight() / 128.f;
     }
 
     public BiomeGenBase getBiome(int x, int z) {
         return BiomeGenBase.hell;
+    }
+
+    public RegistryKey<Biome> getSmallBiome(int x, int z) {
+        return BiomeKeys.NETHER_WASTES;
+    }
+
+    public BetaNetherProperties getProperties() {
+        return prop;
     }
 }

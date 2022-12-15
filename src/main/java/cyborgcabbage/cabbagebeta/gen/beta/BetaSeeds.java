@@ -16,10 +16,10 @@ public class BetaSeeds {
 
     //minecraftseeds.info (internet archive)
     private final String[] SEED_ARRAY = {
-            "6644803604819148923",//stampy
-            "3811868026651017821",//antvenom, hunt for the golden apple
-            "3257840388504953787",//pack png
-            "2151901553968352745",//panorama
+            "6644803604819148923",//Stampy
+            "3811868026651017821",//Antvenom, hunt for the golden apple
+            "3257840388504953787",//Pack Png
+            "2151901553968352745",//Panorama
             "4090136037452000329",//Yog Cave
             "177907495",
             "1385327417",

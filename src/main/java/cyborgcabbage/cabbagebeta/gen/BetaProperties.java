@@ -1,9 +1,9 @@
 package cyborgcabbage.cabbagebeta.gen;
 
-public record BetaProperties(int generationHeight, int seaLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, FeaturesProperty features, int caveRarity, float decliff, float worldScale, float oreRangeScale, boolean extended) implements Cloneable{
+public record BetaProperties(int generationHeight, int oceanLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, FeaturesProperty features, int caveRarity, float decliff, float worldScale, float oreRangeScale, boolean extended) implements Cloneable{
     public boolean match(BetaProperties other){
         if(generationHeight != other.generationHeight()) return false;
-        if(seaLevel != other.seaLevel()) return false;
+        if(oceanLevel != other.oceanLevel()) return false;
         if(factor != other.factor()) return false;
         if(groundLevel != other.groundLevel()) return false;
         if(caveLavaLevel != other.caveLavaLevel()) return false;
@@ -20,6 +20,6 @@ public record BetaProperties(int generationHeight, int seaLevel, float factor, i
 
     @Override
     public BetaProperties clone() {
-        return new BetaProperties(generationHeight, seaLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, features, caveRarity, decliff, worldScale, oreRangeScale, extended);
+        return new BetaProperties(generationHeight, oceanLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, features, caveRarity, decliff, worldScale, oreRangeScale, extended);
     }
 }

@@ -7,6 +7,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.*;
 
 import java.awt.*;
@@ -108,6 +109,7 @@ public class BiomeGenBase {
 	private boolean enableSnow;
 	private boolean enableRain = true;
 	private static final BiomeGenBase[] biomeLookupTable = new BiomeGenBase[4096];
+	private static final RegistryKey<Biome>[][] grid = new RegistryKey[5][5];
 	public int id;
 	public static int biomeCount = 0;
 	private float temperature = 0.5f;
@@ -204,12 +206,49 @@ public class BiomeGenBase {
 	}
 
 	public static void generateBiomeLookup() {
+		fillSmallBiomeGrid();
 		for(int t = 0; t < 64; ++t) {
 			for(int h = 0; h < 64; ++h) {
-				biomeLookupTable[t + h * 64] = getBiome((float) t / 63.0F, (float) h / 63.0F);
+				float temperature = (float) t / 63.0F;
+				float humidity = (float) h / 63.0F;
+				biomeLookupTable[t + h * 64] = getBiome(temperature, humidity);
 			}
 		}
 		desert.topBlock = desert.fillerBlock = Blocks.SAND.getDefaultState();
+	}
+
+	private static void fillSmallBiomeGrid() {
+
+		grid[0][0] = BiomeKeys.ICE_SPIKES;
+		grid[0][1] = BiomeKeys.SNOWY_PLAINS;
+		grid[0][2] = BiomeKeys.SNOWY_PLAINS;
+		grid[0][3] = BiomeKeys.SNOWY_TAIGA;
+		grid[0][4] = BiomeKeys.TAIGA;
+
+		grid[1][0] = BiomeKeys.PLAINS;
+		grid[1][1] = BiomeKeys.PLAINS;
+		grid[1][2] = BiomeKeys.FOREST;
+		grid[1][3] = BiomeKeys.TAIGA;
+		grid[1][4] = BiomeKeys.OLD_GROWTH_SPRUCE_TAIGA;
+
+		grid[2][0] = BiomeKeys.SUNFLOWER_PLAINS;
+		grid[2][1] = BiomeKeys.PLAINS;
+		grid[2][2] = BiomeKeys.FLOWER_FOREST;
+		grid[2][3] = BiomeKeys.BIRCH_FOREST;
+		grid[2][4] = BiomeKeys.DARK_FOREST;
+
+		grid[3][0] = BiomeKeys.SAVANNA;
+		grid[3][1] = BiomeKeys.SAVANNA;
+		grid[3][2] = BiomeKeys.PLAINS;
+		grid[3][3] = BiomeKeys.SPARSE_JUNGLE;
+		grid[3][4] = BiomeKeys.JUNGLE;
+
+		grid[4][0] = BiomeKeys.DESERT;
+		grid[4][1] = BiomeKeys.SAVANNA;
+		grid[4][2] = BiomeKeys.PLAINS;
+		grid[4][3] = BiomeKeys.FOREST;
+		grid[4][4] = BiomeKeys.SPARSE_JUNGLE;
+
 	}
 
 	public WorldGenerator getRandomWorldGenForTrees(Random random1, int height) {
@@ -244,7 +283,50 @@ public class BiomeGenBase {
 
 	public static BiomeGenBase getBiome(float f0, float f1) {
 		f1 *= f0;
-		return f0 < 0.1F ? tundra : (f1 < 0.2F ? (f0 < 0.5F ? tundra : (f0 < 0.95F ? savanna : desert)) : (f1 > 0.5F && f0 < 0.7F ? swampland : (f0 < 0.5F ? taiga : (f0 < 0.97F ? (f1 < 0.35F ? shrubland : forest) : (f1 < 0.45F ? plains : (f1 < 0.9F ? seasonalForest : rainforest))))));
+		if (f0 < 0.1F) return tundra;
+		if (f1 < 0.2F) {
+			if (f0 < 0.5F) return tundra;
+			if (f0 < 0.95F) return savanna;
+			return desert;
+		}
+		if (f1 > 0.5F && f0 < 0.7F) return swampland;
+		if (f0 < 0.5F) return taiga;
+		if (f0 < 0.97F) {
+			if (f1 < 0.35F) return shrubland;
+			return forest;
+		}
+		if (f1 < 0.45F) return plains;
+		if (f1 < 0.9F) return seasonalForest;
+		return rainforest;
+	}
+
+	public static RegistryKey<Biome> getSmallBiome(double t, double h) {
+		int ti;
+		if(t < 0.63375){
+			ti = 0;
+		}else if(t < 0.831514) {
+			ti = 1;
+		}else if(t < 0.937123) {
+			ti = 2;
+		}else if(t < 0.985033) {
+			ti = 3;
+		}else {
+			ti = 4;
+		}
+		int hi;
+		if(h < 0.179937){
+			hi = 0;
+		}else if(h < 0.395293) {
+			hi = 1;
+		}else if(h < 0.588736) {
+			hi = 2;
+		}else if(h < 0.803431) {
+			hi = 3;
+		}else {
+			hi = 4;
+		}
+
+		return grid[ti][hi];
 	}
 
 	public int getSkyColorByTemp(float f1) {

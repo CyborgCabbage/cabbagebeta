@@ -12,9 +12,9 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 public class BetaChunkNoiseSampler extends ChunkNoiseSampler {
     private final Long2IntMap surfaceHeightEstimateCache = new Long2IntOpenHashMap();
     public final DensityFunction beardFunction;
-    private final BetaChunkGenerator columnSource;
+    private final BetaOverworldChunkGenerator columnSource;
 
-    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender, BetaChunkGenerator columnSource) {
+    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender, BetaOverworldChunkGenerator columnSource) {
         super(horizontalCellCount, noiseConfig, startX, startZ, generationShapeConfig, beardifying, chunkGeneratorSettings, fluidLevelSampler, blender);
         this.columnSource = columnSource;
         beardFunction = DensityFunctionTypes.cacheAllInCell(DensityFunctionTypes.Beardifier.INSTANCE).apply(this::getActualDensityFunction);

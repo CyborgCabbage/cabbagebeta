@@ -3,11 +3,13 @@ package cyborgcabbage.cabbagebeta.gen.beta;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cyborgcabbage.cabbagebeta.CabbageBeta;
+import cyborgcabbage.cabbagebeta.gen.FeaturesProperty;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.BiomeSource;
@@ -18,14 +20,17 @@ import java.util.stream.Stream;
 public class BetaOverworldBiomeSource extends BiomeSource {
     public static final Codec<BetaOverworldBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(biomeSource -> null),
-            Codec.BOOL.fieldOf("features").orElse(false).forGetter(BetaOverworldBiomeSource::getModernised)
+            Codec.INT.fieldOf("features").orElse(0).forGetter(b -> b.featuresProperty.getId())
     ).apply(instance, instance.stable(BetaOverworldBiomeSource::new)));
-    private BetaBiomeProvider gen;
+    private BetaChunkGenerator gen;
     private final Registry<Biome> biomeRegistry;
-    private final boolean modernised;
+    private final FeaturesProperty featuresProperty;
 
-    protected BetaOverworldBiomeSource(Registry<Biome> biomeRegistry, boolean modernised) {
-        super(Stream.of(
+    public BetaOverworldBiomeSource(Registry<Biome> biomeRegistry, int fp) {
+        this(biomeRegistry, FeaturesProperty.byId(fp));
+    }
+    public BetaOverworldBiomeSource(Registry<Biome> biomeRegistry, FeaturesProperty featuresProperty) {
+        super(Stream.concat(Stream.of(
                 BiomeGenBase.rainforest,
                 BiomeGenBase.swampland,
                 BiomeGenBase.seasonalForest,
@@ -38,19 +43,14 @@ public class BetaOverworldBiomeSource extends BiomeSource {
                 BiomeGenBase.tundra,
                 BiomeGenBase.hell,
                 BiomeGenBase.sky)
-                .map(biomeGenBase -> {
-                    if(modernised){
-                        return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(biomeGenBase));
-                    }else{
-                        return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(biomeGenBase));
-                    }
-                })
+                .map(biomeGenBase -> biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(biomeGenBase))),
+                biomeRegistry.streamEntries())
         );
         this.biomeRegistry = biomeRegistry;
-        this.modernised = modernised;
+        this.featuresProperty = featuresProperty;
     }
 
-    public void setGenerator(BetaBiomeProvider generator){
+    public void setGenerator(BetaChunkGenerator generator){
         this.gen = generator;
     }
 
@@ -62,15 +62,19 @@ public class BetaOverworldBiomeSource extends BiomeSource {
     @Override
     public RegistryEntry<Biome> getBiome(int x, int y, int z, MultiNoiseUtil.MultiNoiseSampler noise) {
         if(gen == null) return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_SKY);
-        BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
-        if(modernised){
-            return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(b));
-        }else{
-            return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(b));
+        switch (featuresProperty) {
+            case MODERN -> {
+                BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
+                return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(b));
+            }
+            case SMALL_MODERN -> {
+                RegistryKey<Biome> b = gen.getSmallBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
+                return biomeRegistry.getOrCreateEntry(b);
+            }
+            default -> {
+                BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
+                return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(b));
+            }
         }
-    }
-
-    public boolean getModernised() {
-        return modernised;
     }
 }

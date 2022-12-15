@@ -1,6 +1,6 @@
 package cyborgcabbage.cabbagebeta;
 
-import cyborgcabbage.cabbagebeta.gen.beta.BetaChunkGenerator;
+import cyborgcabbage.cabbagebeta.gen.beta.BetaOverworldChunkGenerator;
 import cyborgcabbage.cabbagebeta.gen.beta.BetaNetherChunkGenerator;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import net.fabricmc.api.ModInitializer;
@@ -48,7 +48,7 @@ public class CabbageBeta implements ModInitializer {
 	public static final RegistryKey<WorldPreset> BETA_PRESET = RegistryKey.of(Registry.WORLD_PRESET_KEY, id("beta"));
 	@Override
 	public void onInitialize() {
-		Registry.register(Registry.CHUNK_GENERATOR, id("beta"), BetaChunkGenerator.CODEC);
+		Registry.register(Registry.CHUNK_GENERATOR, id("beta"), BetaOverworldChunkGenerator.CODEC);
 		Registry.register(Registry.CHUNK_GENERATOR, id("beta_nether"), BetaNetherChunkGenerator.CODEC);
 		BETA_RAINFOREST = registerBetaBiome("beta_rainforest", BiomeGenBase.rainforest, BiomeKeys.JUNGLE);
 		BETA_SWAMPLAND = registerBetaBiome("beta_swampland", BiomeGenBase.swampland, BiomeKeys.SWAMP);
