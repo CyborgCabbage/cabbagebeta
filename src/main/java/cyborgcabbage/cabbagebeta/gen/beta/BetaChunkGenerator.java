@@ -171,6 +171,7 @@ public class BetaChunkGenerator extends ChunkGenerator {
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
         //super.generateFeatures(world, chunk, structureAccessor);
+        generator.init(world.getSeed());
         generator.populate(world, chunk);
 
     }
@@ -204,6 +205,7 @@ public class BetaChunkGenerator extends ChunkGenerator {
 
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
+        generator.init(noiseConfig.getLegacyWorldSeed());
         generator.fillChunk(chunk);
         return CompletableFuture.completedFuture(chunk);
     }
