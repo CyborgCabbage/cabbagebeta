@@ -12,9 +12,9 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 public class BetaChunkNoiseSampler extends ChunkNoiseSampler {
     private final Long2IntMap surfaceHeightEstimateCache = new Long2IntOpenHashMap();
     public final DensityFunction beardFunction;
-    private final BetaOverworldChunkGenerator columnSource;
+    private final BetaChunkGenerator columnSource;
 
-    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender, BetaOverworldChunkGenerator columnSource) {
+    public BetaChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender, BetaChunkGenerator columnSource) {
         super(horizontalCellCount, noiseConfig, startX, startZ, generationShapeConfig, beardifying, chunkGeneratorSettings, fluidLevelSampler, blender);
         this.columnSource = columnSource;
         beardFunction = DensityFunctionTypes.cacheAllInCell(DensityFunctionTypes.Beardifier.INSTANCE).apply(this::getActualDensityFunction);
@@ -35,7 +35,7 @@ public class BetaChunkNoiseSampler extends ChunkNoiseSampler {
         int x = ColumnPos.getX(columnPos);
         int z = ColumnPos.getZ(columnPos);
         int yNoiseSize = columnSource.getHeight()/8+1;
-        double[] noise = columnSource.generateTerrainNoiseColumn(null, x * 0.25, 0, z * 0.25, yNoiseSize);
+        double[] noise = columnSource.generateTerrainNoiseColumn(x, z, yNoiseSize);
         for (int r = noise.length-1; r > 0; r--) {
             if (noise[r]*0.01 > 0.390625) {
                 return r*8;

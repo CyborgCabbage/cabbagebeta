@@ -37,8 +37,6 @@ public class CabbageBeta implements ModInitializer {
 	public static RegistryKey<Biome> BETA_SKY;
 
 	public static Map<BiomeGenBase, RegistryKey<Biome>> BETA_TO_MODERN_BIOME = new HashMap<>();
-	public static Map<BiomeGenBase, RegistryKey<Biome>> BETA_TO_SUBSTITUTE_BIOME = new HashMap<>();
-	public static Map<RegistryKey<Biome>, BiomeGenBase> BIOME_TO_BETA_BIOME = new HashMap<>();
 
 	public static final RegistryKey<DimensionType> BETA_OVERWORLD_EXTENDED_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_overworld_extended"));
 	public static final RegistryKey<DimensionType> BETA_OVERWORLD_TYPE = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, id("beta_overworld"));
@@ -67,9 +65,6 @@ public class CabbageBeta implements ModInitializer {
 		RegistryKey<Biome> modernKey = RegistryKey.of(Registry.BIOME_KEY, id(modernId));
 		Registry.register(BuiltinRegistries.BIOME, modernKey, betaBiome.createModernBiome());
 		BETA_TO_MODERN_BIOME.put(betaBiome, modernKey);
-		BETA_TO_SUBSTITUTE_BIOME.put(betaBiome, substituteKey);
-		BIOME_TO_BETA_BIOME.put(modernKey, betaBiome);
-		BIOME_TO_BETA_BIOME.put(substituteKey, betaBiome);
 		return modernKey;
 	}
 

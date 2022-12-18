@@ -32,7 +32,7 @@
   "options.beta_preset.flooded" : "Flooded",
   "options.beta_preset.smooth" : "Smooth",
   "options.beta_preset.caving" : "Caving",
-  "options.beta_preset.major" : "Major",
-  "options.beta_preset.minor" : "Minor",
+  "options.beta_preset.double_scale" : "Double Scale",
+  "options.beta_preset.half_scale" : "Half Scale",
   "options.beta_preset.custom" : "Custom"
 }

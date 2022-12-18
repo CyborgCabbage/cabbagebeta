@@ -45,14 +45,16 @@ public class CustomizeBetaLevelScreen extends Screen {
     private final RetroOption<FeaturesProperty> featuresOption = new RetroOption.FeaturesOption("features", FeaturesProperty.BETA);
     private final RetroOption<Integer> caveRarityOption = new RetroOption.PositiveIntegerFieldOption("cave_rarity", 15);
     private final RetroOption<Double> decliffOption = new RetroOption.PercentOption("decliff", 0.0);
-    private final RetroOption<Float> worldScaleOption = new RetroOption.FloatFieldOption("world_scale", 1.f);
+    private final RetroOption<Float> terrainScaleOption = new RetroOption.FloatFieldOption("terrain_scale", 1.f);
     private final RetroOption<Float> oreRangeScaleOption = new RetroOption.FloatFieldOption("ore_range_scale", 1.f);
     private final RetroOption<Boolean> extendedOption = new RetroOption.BooleanOption("extended", false);
+    private final RetroOption<Float> biomeScaleOption = new RetroOption.FloatFieldOption("biome_scale", 1.f);
 
     private final RetroOption<Integer> netherGenerationHeightOption = new RetroOption.IntegerSliderOption("generation_height", 1, 4, 64, 2);
     private final RetroOption<Integer> netherOceanLevelOption = new RetroOption.IntegerFieldOption("ocean_level", 32);
     private final RetroOption<Float> netherTerrainScaleOption = new RetroOption.FloatFieldOption("terrain_scale", 1.f);
     private final RetroOption<Boolean> netherCeilingOption = new RetroOption.BooleanOption("ceiling", true);
+    private final RetroOption<FeaturesProperty> netherFeaturesOption = new RetroOption.FeaturesOption("features", FeaturesProperty.BETA);
 
     private BetaProperties customOverworldProperties = null;
 
@@ -201,9 +203,10 @@ public class CustomizeBetaLevelScreen extends Screen {
         featuresOption.set(initial.features());
         caveRarityOption.set(initial.caveRarity());
         decliffOption.set((double)initial.decliff());
-        worldScaleOption.set(initial.worldScale());
+        terrainScaleOption.set(initial.terrainScale());
         oreRangeScaleOption.set(initial.oreRangeScale());
         extendedOption.set(initial.extended());
+        biomeScaleOption.set(initial.biomeScale());
         //CREATE WIDGETS
         if(overworldOptions != null) this.remove(overworldOptions);
         List<RetroOption> options = new ArrayList<>();
@@ -213,14 +216,15 @@ public class CustomizeBetaLevelScreen extends Screen {
                 groundLevelOption,
                 decliffOption,
                 generationHeightOption,
-                worldScaleOption,
+                terrainScaleOption,
                 oceanLevelOption,
                 caveLavaLevelOption,
                 caveRarityOption,
                 oreRangeScaleOption,
                 fixesOption,
                 featuresOption,
-                extendedOption
+                extendedOption,
+                biomeScaleOption
         );
         this.overworldOptions = new OptionsListWidget(this, this.client, options, betaPreset == BetaPreset.CUSTOM);
         this.addSelectableChild(overworldOptions);
@@ -240,6 +244,7 @@ public class CustomizeBetaLevelScreen extends Screen {
         netherOceanLevelOption.set(initial.oceanLevel());
         netherTerrainScaleOption.set(initial.terrainScale());
         netherCeilingOption.set(initial.ceiling());
+        netherFeaturesOption.set(initial.features());
         //CREATE WIDGETS
         if(netherOptions != null) this.remove(netherOptions);
         List<RetroOption> options = new ArrayList<>();
@@ -247,7 +252,8 @@ public class CustomizeBetaLevelScreen extends Screen {
                 netherGenerationHeightOption,
                 netherOceanLevelOption,
                 netherTerrainScaleOption,
-                netherCeilingOption
+                netherCeilingOption,
+                netherFeaturesOption
         );
         this.netherOptions = new OptionsListWidget(this, this.client, options, betaPreset == BetaNetherPreset.CUSTOM);
         this.addSelectableChild(netherOptions);
@@ -265,9 +271,10 @@ public class CustomizeBetaLevelScreen extends Screen {
                 featuresOption.get(),
                 caveRarityOption.get(),
                 decliffOption.get().floatValue(),
-                worldScaleOption.get(),
+                terrainScaleOption.get(),
                 oreRangeScaleOption.get(),
-                extendedOption.get()
+                extendedOption.get(),
+                biomeScaleOption.get()
         );
     }
     private BetaNetherProperties netherPropertiesFromOptions(){
@@ -275,7 +282,8 @@ public class CustomizeBetaLevelScreen extends Screen {
                 netherGenerationHeightOption.get(),
                 netherOceanLevelOption.get(),
                 netherTerrainScaleOption.get(),
-                netherCeilingOption.get()
+                netherCeilingOption.get(),
+                netherFeaturesOption.get()
         );
     }
 

@@ -5,13 +5,11 @@ import net.minecraft.util.math.MathHelper;
 
 public enum FeaturesProperty implements TranslatableOption {
     BETA(0, "createWorld.customize.beta.features.beta", false),
-    BETA_AND_RESOURCES(1, "createWorld.customize.beta.features.beta_and_resources", false),
-    MODERN(2, "createWorld.customize.beta.features.modern", true),
-    SMALL_MODERN(3, "createWorld.customize.beta.features.small_modern", true);
+    MODERN(1, "createWorld.customize.beta.features.modern", true);
 
     private final int id;
     private final String translationKey;
-    private boolean modernFeatures;
+    private final boolean modernFeatures;
 
     FeaturesProperty(int id, String translationKey, boolean modernFeatures) {
         this.id = id;
@@ -29,7 +27,7 @@ public enum FeaturesProperty implements TranslatableOption {
         return this.translationKey;
     }
 
-    public boolean hasModernFeatures() {
+    public boolean modern() {
         return this.modernFeatures;
     }
 

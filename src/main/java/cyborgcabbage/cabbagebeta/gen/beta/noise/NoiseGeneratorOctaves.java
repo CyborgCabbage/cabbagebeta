@@ -46,7 +46,7 @@ public class NoiseGeneratorOctaves {
         return output;
     }
 
-    public double[] func_4109_a(double[] d1, int i2, int i3, int i4, int i5, double d6, double d8, double d10) {
-        return this.generateNoiseOctaves(d1, (double)i2, 10.0D, (double)i3, i4, 1, i5, d6, 1.0D, d8);
+    public double[] func_4109_a(double[] d1, double i2, double i3, int i4, int i5, double d6, double d8, double d10) {
+        return this.generateNoiseOctaves(d1, i2, 10.0D, i3, i4, 1, i5, d6, 1.0D, d8);
     }
 }

@@ -26,7 +26,9 @@ import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.*;
+import net.minecraft.util.registry.BuiltinRegistries;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
@@ -39,11 +41,13 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.StructureWeightSampler;
 import net.minecraft.world.gen.chunk.*;
 import net.minecraft.world.gen.noise.NoiseConfig;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -65,11 +69,11 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
             betaPropertyCodec(Codec.INT, "features", b -> b.features().getId()),
             betaPropertyCodec(Codec.INT, "cave_rarity", BetaProperties::caveRarity),
             betaPropertyCodec(Codec.FLOAT, "decliff", BetaProperties::decliff),
-            betaPropertyCodec(Codec.FLOAT, "world_scale", BetaProperties::worldScale),
+            betaPropertyCodec(Codec.FLOAT, "terrain_scale", BetaProperties::terrainScale),
             betaPropertyCodec(Codec.FLOAT, "ore_range_scale", BetaProperties::oreRangeScale),
-            betaPropertyCodec(Codec.BOOL, "extended", BetaProperties::extended)
+            betaPropertyCodec(Codec.BOOL, "extended", BetaProperties::extended),
+            betaPropertyCodec(Codec.FLOAT, "biome_scale", BetaProperties::biomeScale)
     ).apply(instance, instance.stable(BetaOverworldChunkGenerator::new)));
-    private final Registry<Biome> biomeRegistry;
 
     private NoiseGeneratorOctaves noise16a;
     private NoiseGeneratorOctaves noise16b;
@@ -82,16 +86,13 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
     private BetaBiomes terrainBiomes;
     private BetaBiomesSampler biomeSampler;
     private final BetaProperties prop;
-    private final AquiferSampler.FluidLevelSampler fluidLevelSampler;
-    private final BlockState defaultBlock = Blocks.STONE.getDefaultState();
-    private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
     protected void init(long seed){
         if(rand == null) {
             rand = new Random(seed);
             worldSeed = seed;
-            this.terrainBiomes = new BetaBiomes(seed, prop.worldScale());
-            this.biomeSampler = new BetaBiomesSampler(seed, prop.worldScale());
+            this.terrainBiomes = new BetaBiomes(seed, prop.biomeScale());
+            this.biomeSampler = new BetaBiomesSampler(seed, prop.biomeScale());
             this.noise16a = new NoiseGeneratorOctaves(this.rand, 16);
             this.noise16b = new NoiseGeneratorOctaves(this.rand, 16);
             this.noise8a = new NoiseGeneratorOctaves(this.rand, 8);
@@ -103,23 +104,17 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         }
     }
 
-    public BetaOverworldChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, int generationHeight, int oceanLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, int features, int caveRarity, float decliff, float worldScale, float oreRangeScale, boolean extended) {
-        this(structureSetRegistry, biomeRegistry, new BetaProperties(generationHeight, oceanLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, FeaturesProperty.byId(features), caveRarity, decliff, worldScale, oreRangeScale, extended ));
+    public BetaOverworldChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, int generationHeight, int oceanLevel, float factor, int groundLevel, int caveLavaLevel, float mixing, boolean fixes, int features, int caveRarity, float decliff, float terrainScale, float oreRangeScale, boolean extended, float biomeScale) {
+        this(structureSetRegistry, biomeRegistry, new BetaProperties(generationHeight, oceanLevel, factor, groundLevel, caveLavaLevel, mixing, fixes, FeaturesProperty.byId(features), caveRarity, decliff, terrainScale, oreRangeScale, extended, biomeScale));
     }
 
     public BetaOverworldChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry, BetaProperties p) {
-        super(structureSetRegistry, new BetaOverworldBiomeSource(biomeRegistry, p.features()));
-        this.biomeRegistry = biomeRegistry;
+        super(structureSetRegistry, biomeRegistry, p.features(), Blocks.STONE.getDefaultState(), Fluids.WATER.getDefaultState().getBlockState());
         this.prop = p;
         this.caveGen = new MapGenCaves(p.caveLavaLevel(), getMinimumY(), getHeight(), p.caveRarity(), p.fixes());
-        AquiferSampler.FluidLevel fluidLevel = new AquiferSampler.FluidLevel(prop.oceanLevel(), Fluids.WATER.getDefaultState().getBlockState());
+        AquiferSampler.FluidLevel fluidLevel = new AquiferSampler.FluidLevel(getSeaLevel(), this.oceanFluid);
         fluidLevelSampler = (x,y,z) -> fluidLevel;
-        if(biomeSource instanceof BetaOverworldBiomeSource bobs){
-            bobs.setGenerator(this);
-        }
     }
-
-
 
     @Override
     public int getSeaLevel() {
@@ -138,7 +133,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
 
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
-        if(prop.features().hasModernFeatures()) {
+        if(prop.features().modern()) {
             super.generateFeatures(world, chunk, structureAccessor);
         }else{
             //BlockSand.fallInstantly = true;
@@ -224,7 +219,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                     int relX = x - (chunkX + 8);
                     int relZ = z - (chunkZ + 8);
                     int surfaceY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-                    double temperature = generatedTemperatures[relX * 16 + relZ] - (double) (surfaceY - prop.oceanLevel()) / 64.0D * 0.3d / prop.worldScale();
+                    double temperature = generatedTemperatures[relX * 16 + relZ] - (double) (surfaceY - prop.oceanLevel()) / 64.0D * 0.3d / prop.terrainScale();
                     BlockPos.Mutable blockPosTop = new BlockPos.Mutable(x, surfaceY, z);
                     BlockState stateBelow = world.getBlockState(blockPosTop.down());
                     if (temperature < 0.5D && surfaceY > 0 && surfaceY < getHeight() && world.isAir(blockPosTop) && stateBelow.getMaterial().isSolid() && stateBelow.getMaterial() != Material.ICE) {
@@ -240,7 +235,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
 
     @Override
     public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
-        if(prop.features().hasModernFeatures()){
+        if(prop.features().modern()){
             if (SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                 return;
             }
@@ -249,7 +244,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         }else {
             ChunkPos pos = chunk.getPos();
             BiomeAccess biomeAccess = region.getBiomeAccess();
-            double scale = 8.0D / 256D / prop.worldScale();
+            double scale = 8.0D / 256D / prop.terrainScale();
             double[] sandNoise;
             double[] gravelNoise;
             double[] stoneNoise;
@@ -270,32 +265,25 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                 for (int x = 0; x < 16; ++x) {
                     chunkBlockPos.setX(x);
                     worldBlockPos.setX(x + pos.x * 16);
-                    BiomeGenBase biome = null;
-                    if (prop.fixes()) {
-                        Optional<RegistryKey<Biome>> key = biomeAccess.getBiome(worldBlockPos).getKey();
-                        if (key.isPresent()) {
-                            biome = CabbageBeta.BIOME_TO_BETA_BIOME.get(key.get());
-                        }
-                    }
-                    if (biome == null) biome = biomeSampler.getBiomeAtBlock(x + pos.x * 16, z + pos.z * 16);
+                    BiomeGenBase biome = biomeSampler.getBiomeAtBlock(x + pos.x * 16, z + pos.z * 16);
 
                     boolean sand = sandNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 0.0D;
                     boolean gravel = gravelNoise[z + x * 16] + this.rand.nextDouble() * 0.2d > 3.0D;
                     int stone = (int) (stoneNoise[z + x * 16] / 3.0D + 3.0D + this.rand.nextDouble() * 0.25D);
-                    int i14 = -1;
+                    int surfaceDepth = -1;
                     BlockState topBlock = biome.topBlock;
                     BlockState fillerBlock = biome.fillerBlock;
-                    for (int yBlock = getHeight() - 1; yBlock >= 0; --yBlock) {
+                    for (int yBlock = getHeight() - 1; yBlock >= getMinimumY(); --yBlock) {
                         chunkBlockPos.setY(yBlock);
                         BlockState block = null;
-                        if (yBlock <= rand.nextInt(5)) {
+                        if (yBlock <= rand.nextInt(5) + getMinimumY()) {
                             block = Blocks.BEDROCK.getDefaultState();
                         } else {
                             BlockState state = chunk.getBlockState(chunkBlockPos);
                             if (state.isAir()) {
-                                i14 = -1;
+                                surfaceDepth = -1;
                             } else if (state.isOf(Blocks.STONE)) {
-                                if (i14 == -1) {
+                                if (surfaceDepth == -1) {
                                     if (stone <= 0) {
                                         topBlock = Blocks.AIR.getDefaultState();
                                         fillerBlock = Blocks.STONE.getDefaultState();
@@ -316,17 +304,17 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                                         topBlock = Blocks.WATER.getDefaultState();
                                     }
 
-                                    i14 = stone;
+                                    surfaceDepth = stone;
                                     if (yBlock >= prop.oceanLevel() - 1) {
                                         block = topBlock;
                                     } else {
                                         block = fillerBlock;
                                     }
-                                } else if (i14 > 0) {
-                                    --i14;
+                                } else if (surfaceDepth > 0) {
+                                    --surfaceDepth;
                                     block = fillerBlock;
-                                    if (i14 == 0 && fillerBlock == Blocks.SAND.getDefaultState()) {
-                                        i14 = this.rand.nextInt(4);
+                                    if (surfaceDepth == 0 && fillerBlock == Blocks.SAND.getDefaultState()) {
+                                        surfaceDepth = this.rand.nextInt(4);
                                         fillerBlock = Blocks.SANDSTONE.getDefaultState();
                                     }
                                 }
@@ -339,25 +327,9 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         }
     }
 
-    public void buildSurface(Chunk chunk, HeightContext heightContext, NoiseConfig noiseConfig, StructureAccessor structureAccessor, BiomeAccess biomeAccess, Registry<Biome> biomeRegistry, Blender blender) {
-        ChunkNoiseSampler chunkNoiseSampler = getOrCreateChunkNoiseSampler(chunk, noiseConfig, structureAccessor, blender);
-        noiseConfig.getSurfaceBuilder().buildSurface(noiseConfig, biomeAccess, biomeRegistry, getOverworldSettings().usesLegacyRandom(), heightContext, chunk, chunkNoiseSampler, getOverworldSettings().surfaceRule());
-    }
 
-    private BetaChunkNoiseSampler getOrCreateChunkNoiseSampler(Chunk chunk, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Blender blender) {
-        return (BetaChunkNoiseSampler)chunk.getOrCreateChunkNoiseSampler(ch -> this.createChunkNoiseSampler(ch, structureAccessor, blender, noiseConfig));
-    }
 
-    private BetaChunkNoiseSampler createChunkNoiseSampler(Chunk chunk, StructureAccessor world, Blender blender, NoiseConfig noiseConfig) {
-        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk);
-        ChunkPos chunkPos = chunk.getPos();
-        int i = 16 / generationShapeConfig.horizontalBlockSize();
-        return new BetaChunkNoiseSampler(
-                i, noiseConfig, chunkPos.getStartX(), chunkPos.getStartZ(), generationShapeConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), getOverworldSettings(), fluidLevelSampler, blender, this
-        );
-    }
-
-    private ChunkGeneratorSettings getOverworldSettings(){
+    protected ChunkGeneratorSettings getModernSettings(){
         return BuiltinRegistries.CHUNK_GENERATOR_SETTINGS.getOrCreateEntry(ChunkGeneratorSettings.OVERWORLD).value();
     }
 
@@ -373,7 +345,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
 
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk.getHeightLimitView());
+        GenerationShapeConfig generationShapeConfig = getModernSettings().generationShapeConfig().trimHeight(chunk.getHeightLimitView());
         int i = generationShapeConfig.minimumY();
         int j = MathHelper.floorDiv(i, generationShapeConfig.verticalBlockSize());
         int k = MathHelper.floorDiv(generationShapeConfig.height(), generationShapeConfig.verticalBlockSize());
@@ -382,7 +354,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         } else {
             int l = chunk.getSectionIndex(k * generationShapeConfig.verticalBlockSize() - 1 + i);
             int m = chunk.getSectionIndex(i);
-            Set<ChunkSection> set = Sets.<ChunkSection>newHashSet();
+            Set<ChunkSection> set = Sets.newHashSet();
 
             for(int n = l; n >= m; --n) {
                 ChunkSection chunkSection = chunk.getSection(n);
@@ -413,7 +385,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         int chunkBlockX = pos.getStartX();
         int chunkBlockZ = pos.getStartZ();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        GenerationShapeConfig generationShapeConfig = getOverworldSettings().generationShapeConfig().trimHeight(chunk);
+        GenerationShapeConfig generationShapeConfig = getModernSettings().generationShapeConfig().trimHeight(chunk);
         int hSize = generationShapeConfig.horizontalBlockSize();
         int vSize = generationShapeConfig.verticalBlockSize();
         final int cellCountX = 16 / hSize;
@@ -426,7 +398,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         double[] terrainNoise = this.generateTerrainNoise(pos.x * horizontalNoiseSize, 0, pos.z * horizontalNoiseSize, xNoiseSize, yNoiseSize, zNoiseSize, pos.x*16, pos.z*16);
         cellHeight = Math.min(cellHeight, yNoiseSize - 1);
         chunkNoiseSampler.sampleStartNoise();
-        if(prop.features().hasModernFeatures()) {
+        if(prop.features().modern()) {
             for (int cellX = 0; cellX < cellCountX; ++cellX) {
                 chunkNoiseSampler.sampleEndNoise(cellX);
                 for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
@@ -486,9 +458,9 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                                             blockState = Blocks.WATER.getDefaultState();
                                         }
                                     } else {
-                                        blockState = AIR;
+                                        blockState = airBlock;
                                     }
-                                    if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                    if (blockState != airBlock && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                         if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
                                             mutable.set(blockX, blockY, blockZ);
                                             ((ProtoChunk) chunk).addLightSource(mutable);
@@ -566,9 +538,9 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                                             blockState = Blocks.WATER.getDefaultState();
                                         }
                                     } else {
-                                        blockState = AIR;
+                                        blockState = airBlock;
                                     }
-                                    if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                    if (blockState != airBlock && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                         if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
                                             mutable.set(blockX, blockY, blockZ);
                                             ((ProtoChunk) chunk).addLightSource(mutable);
@@ -598,7 +570,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         chunkNoiseSampler.stopInterpolation();
         chunkNoiseSampler.sampleStartNoise();
         if(prop.extended()) {
-            if(prop.features().hasModernFeatures()) {
+            if(prop.features().modern()) {
                 for (int cellX = 0; cellX < cellCountX; ++cellX) {
                     chunkNoiseSampler.sampleEndNoise(cellX);
                     for (int cellZ = 0; cellZ < cellCountZ; ++cellZ) {
@@ -636,9 +608,9 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                                                 blockState = Blocks.WATER.getDefaultState();
                                             }
                                         } else {
-                                            blockState = AIR;
+                                            blockState = airBlock;
                                         }
-                                        if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                        if (blockState != airBlock && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                             if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
                                                 mutable.set(blockX, blockY, blockZ);
                                                 ((ProtoChunk) chunk).addLightSource(mutable);
@@ -678,7 +650,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                                         int blockZ = chunkBlockZ + cellZ * hSize + subZ;
                                         int sectionZ = blockZ & 15;
                                         BlockState blockState = this.defaultBlock;
-                                        if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                                        if (blockState != airBlock && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                             chunkSection.setBlockState(sectionX, sectionY, sectionZ, blockState, false);
                                             oceanFloor.trackUpdate(sectionX, blockY, sectionZ, blockState);
                                             worldSurface.trackUpdate(sectionX, blockY, sectionZ, blockState);
@@ -695,17 +667,17 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         return chunk;
     }
 
-    private double[] generateTerrainNoise(int xOffset, int yOffset, int zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize, int blockX, int blockZ) {
+    private double[] generateTerrainNoise(double xOffset, double yOffset, double zOffset, int xNoiseSize, int yNoiseSize, int zNoiseSize, int blockX, int blockZ) {
         double[] noiseArray = new double[xNoiseSize * yNoiseSize * zNoiseSize];
 
 
         double hScale = 684.412d;
         double vScale = 684.412d;
-        double[] highFreq2d10 = this.noise10a.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 1.121D/prop.worldScale(), 1.121D/prop.worldScale(), 0.5D);
-        double[] lowFreq2d16 = this.noise16c.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 200.0D/prop.worldScale(), 200.0D/prop.worldScale(), 0.5D);
-        double[] highFreq3d8 = this.noise8a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale / 80.0D/prop.worldScale(), vScale / 160.0D/prop.worldScale(), hScale / 80.0D/prop.worldScale());
-        double[] lowFreq3d16a = this.noise16a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale/prop.worldScale(), vScale/prop.worldScale(), hScale/prop.worldScale());
-        double[] lowFreq3d16b = this.noise16b.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale/prop.worldScale(), vScale/prop.worldScale(), hScale/prop.worldScale());
+        double[] highFreq2d10 = this.noise10a.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 1.121D/prop.terrainScale(), 1.121D/prop.terrainScale(), 0.5D);
+        double[] lowFreq2d16 = this.noise16c.func_4109_a(null, xOffset, zOffset, xNoiseSize, zNoiseSize, 200.0D/prop.terrainScale(), 200.0D/prop.terrainScale(), 0.5D);
+        double[] highFreq3d8 = this.noise8a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale / 80.0D/prop.terrainScale(), vScale / 160.0D/prop.terrainScale(), hScale / 80.0D/prop.terrainScale());
+        double[] lowFreq3d16a = this.noise16a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale/prop.terrainScale(), vScale/prop.terrainScale(), hScale/prop.terrainScale());
+        double[] lowFreq3d16b = this.noise16b.generateNoiseOctaves(null, xOffset, yOffset, zOffset, xNoiseSize, yNoiseSize, zNoiseSize, hScale/prop.terrainScale(), vScale/prop.terrainScale(), hScale/prop.terrainScale());
         int noiseIndex = 0;
         int noiseIndex2 = 0;
         int samplePeriod = 16 / xNoiseSize;
@@ -780,7 +752,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                 ++noiseIndex2;
 
                 for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
-                    double bias = ((double)yNoiseIndex/prop.worldScale() - groundLevelLocal) * prop.factor() / highFreqHumid;
+                    double bias = ((double)yNoiseIndex/prop.terrainScale() - groundLevelLocal) * prop.factor() / highFreqHumid;
                     if(bias < 0.0D) {
                         bias *= 4.0D;
                     }
@@ -812,138 +784,14 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         return noiseArray;
     }
 
-    public double[] generateTerrainNoiseColumn(double[] noiseArray, double xOffset, double yOffset, double zOffset, int yNoiseSize) {
-        if(noiseArray == null) {
-            noiseArray = new double[yNoiseSize];
-        }
-
-        double hScale = 684.412d;
-        double vScale = 684.412d;
-        double temp = this.biomeSampler.getTemperatureAtBlock((int)(xOffset*4), (int)(zOffset*4));
-        double humidity = this.biomeSampler.getHumidityAtBlock((int)(xOffset*4), (int)(zOffset*4));
-
-        double[] highFreq2d10s = this.noise10a.generateNoiseOctaves(null, xOffset, 10.0D, zOffset, 1, 1, 1, 1.121D/prop.worldScale(), 1.0D, 1.121D/prop.worldScale());
-        double[] lowFreq2d16s = this.noise16c.generateNoiseOctaves(null, xOffset, 10.0D, zOffset, 1, 1, 1, 200.0D/prop.worldScale(), 1.0D, 200.0D/prop.worldScale());
-        double[] highFreq3d8s = this.noise8a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale / 80.0D/prop.worldScale(), vScale / 160.0D/prop.worldScale(), hScale / 80.0D/prop.worldScale());
-        double[] lowFreq3d16as = this.noise16a.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale/prop.worldScale(), vScale/prop.worldScale(), hScale/prop.worldScale());
-        double[] lowFreq3d16bs = this.noise16b.generateNoiseOctaves(null, xOffset, yOffset, zOffset, 1, yNoiseSize, 1, hScale/prop.worldScale(), vScale/prop.worldScale(), hScale/prop.worldScale());
-        int noiseIndex = 0;
-        double humidityVal = humidity * temp;
-        humidityVal = 1.0D - humidityVal;
-        humidityVal *= humidityVal;
-        humidityVal *= humidityVal;
-        humidityVal = 1.0D - humidityVal;
-        double highFreqHumid = (highFreq2d10s[0] + 256.0D) / 512.0D;
-        highFreqHumid *= humidityVal;
-        if(highFreqHumid > 1.0D) {
-            highFreqHumid = 1.0D;
-        }
-
-        double lowFreq2d3 = lowFreq2d16s[0] / 8000.0D;
-        if(lowFreq2d3 < 0.0D) {
-            lowFreq2d3 = -lowFreq2d3 * 0.3d;
-        }
-
-        lowFreq2d3 = lowFreq2d3 * 3.0D - 2.0D;
-        if(lowFreq2d3 < 0.0D) {
-            lowFreq2d3 /= 2.0D;
-            if(lowFreq2d3 < -1.0D) {
-                lowFreq2d3 = -1.0D;
-            }
-
-            lowFreq2d3 /= 1.4D;
-            lowFreq2d3 /= 2.0D;
-            //double decliff = 0.3;//[0, 1.0] -> [0, 0.35]
-            if(prop.decliff()*0.35 <= 0.001){
-                highFreqHumid = 0.0D;
-            }else{
-                double temp2 = lowFreq2d3*(-1/(prop.decliff()*0.35));
-                highFreqHumid *= Math.max(0.9*(1-temp2), 0);
-            }
-
-
-        } else {
-            if(lowFreq2d3 > 1.0D) {
-                lowFreq2d3 = 1.0D;
-            }
-
-            lowFreq2d3 /= 8.0D;
-        }
-
-        if(highFreqHumid < 0.0D) {
-            highFreqHumid = 0.0D;
-        }
-
-        highFreqHumid += 0.5D;
-        lowFreq2d3 = lowFreq2d3 * (double) 17 / 16.0D;
-        double groundLevelLocal = (double)prop.groundLevel()/8.0 + lowFreq2d3 * 4.0D;
-        for(int yNoiseIndex = 0; yNoiseIndex < yNoiseSize; ++yNoiseIndex) {
-            double bias = ((double)yNoiseIndex/prop.worldScale() - groundLevelLocal) * prop.factor() / highFreqHumid;
-            if(bias < 0.0D) {
-                bias *= 4.0D;
-            }
-
-            double a = lowFreq3d16as[noiseIndex] / 512.0D;
-            double b = lowFreq3d16bs[noiseIndex] / 512.0D;
-            double mix = highFreq3d8s[noiseIndex] / 20.0D * prop.mixing() + 0.5D;
-            double noiseValue;
-            if(mix < 0.0D) {
-                noiseValue = a;
-            } else if(mix > 1.0D) {
-                noiseValue = b;
-            } else {
-                noiseValue = a + (b - a) * mix;
-            }
-            noiseValue -= bias;
-            //Fall-off
-            float fallOffStart = getHeight() == 64 ? 2 : 4;
-            if(yNoiseIndex > yNoiseSize - fallOffStart) {
-                double d44 = (yNoiseIndex - (yNoiseSize - fallOffStart)) / (fallOffStart-1.f);
-                noiseValue = noiseValue * (1.0D - d44) + -10.0D * d44;
-            }
-
-            noiseArray[noiseIndex] = noiseValue;
-            ++noiseIndex;
-        }
-        return noiseArray;
+    public double[] generateTerrainNoiseColumn(int xOffset, int zOffset, int yNoiseSize) {
+        return generateTerrainNoise(xOffset*0.25, 0, zOffset*0.25, 1, yNoiseSize, 1, xOffset, zOffset);
     }
 
 
     @Override
     public int getMinimumY() {
         return prop.extended() ? -64 : 0;
-    }
-
-    @Override
-    public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
-        return switch(heightmap) {
-            case WORLD_SURFACE_WG, WORLD_SURFACE -> Math.max(getSolidHeight(x, z, world), getSeaLevel());
-            case OCEAN_FLOOR_WG, OCEAN_FLOOR, MOTION_BLOCKING, MOTION_BLOCKING_NO_LEAVES -> getSolidHeight(x, z, world);
-        };
-    }
-
-    public int getSolidHeight(int x, int z, HeightLimitView world) {
-        int yNoiseSize = getHeight()/8+1;
-        double[] noise = generateTerrainNoiseColumn(null, x * 0.25, 0, z * 0.25, yNoiseSize);
-        for (int i = noise.length-1; i > 0; i--) {
-            double above = noise[i];
-            double below = noise[i-1];
-            if(above < 0 && below > 0){
-                //Found ground
-                double delta = -above/(below-above);
-                return Math.min(i*8-(int)Math.floor(8*delta), getHeight());
-            }
-        }
-        return world.getBottomY();
-    }
-
-    @Override
-    public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
-        return new VerticalBlockSample(world.getBottomY(), Collections.nCopies(64, Blocks.STONE.getDefaultState()).toArray(new BlockState[]{}));
-    }
-
-    @Override
-    public void getDebugHudText(List<String> text, NoiseConfig noiseConfig, BlockPos pos) {
     }
 
     public int getHeight() {
@@ -963,7 +811,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         return biomeSampler.getBiomeAtBlock(x, z);
     }
 
-    public RegistryKey<Biome> getSmallBiome(int x, int z) {
+    public RegistryKey<Biome> getModernBiome(int x, int z) {
         if(rand == null) return BiomeKeys.WINDSWEPT_HILLS;
         return biomeSampler.getSmallBiomeAtBlock(x, z);
     }

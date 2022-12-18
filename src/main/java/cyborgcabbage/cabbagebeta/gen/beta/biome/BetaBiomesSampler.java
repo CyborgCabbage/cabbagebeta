@@ -1,6 +1,5 @@
 package cyborgcabbage.cabbagebeta.gen.beta.biome;
 
-import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.beta.noise.NoiseGeneratorOctaves2;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.RegistryKey;
@@ -19,12 +18,6 @@ public class BetaBiomesSampler {
         this.humidityGenerator = new NoiseGeneratorOctaves2(new Random(seed * 39811L), 4);
         this.noise9 = new NoiseGeneratorOctaves2(new Random(seed * 543321L), 2);
         this.worldScale = worldScale;
-        //Printing
-        for(int x = 0; x < 50; x++) {
-            for(int z = 0; z < 50; z++) {
-                System.out.println(getHumidityAtBlock(x*709, z*709));
-            }
-        }
     }
 
     public BiomeGenBase getBiomeAtBlock( int x, int z) {

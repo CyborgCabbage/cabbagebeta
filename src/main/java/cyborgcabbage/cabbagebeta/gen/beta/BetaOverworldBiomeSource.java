@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.FeaturesProperty;
-import cyborgcabbage.cabbagebeta.gen.beta.biome.BetaBiomeProvider;
 import cyborgcabbage.cabbagebeta.gen.beta.biome.BiomeGenBase;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.registry.Registry;
@@ -62,19 +61,12 @@ public class BetaOverworldBiomeSource extends BiomeSource {
     @Override
     public RegistryEntry<Biome> getBiome(int x, int y, int z, MultiNoiseUtil.MultiNoiseSampler noise) {
         if(gen == null) return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_SKY);
-        switch (featuresProperty) {
-            case MODERN -> {
-                BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
-                return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_SUBSTITUTE_BIOME.get(b));
-            }
-            case SMALL_MODERN -> {
-                RegistryKey<Biome> b = gen.getSmallBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
-                return biomeRegistry.getOrCreateEntry(b);
-            }
-            default -> {
-                BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
-                return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(b));
-            }
+        if (featuresProperty == FeaturesProperty.MODERN) {
+            RegistryKey<Biome> b = gen.getModernBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
+            return biomeRegistry.getOrCreateEntry(b);
+        } else {
+            BiomeGenBase b = gen.getBiome(BiomeCoords.toBlock(x), BiomeCoords.toBlock(z));
+            return biomeRegistry.getOrCreateEntry(CabbageBeta.BETA_TO_MODERN_BIOME.get(b));
         }
     }
 }

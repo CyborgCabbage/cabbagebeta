@@ -3,9 +3,9 @@ package cyborgcabbage.cabbagebeta.gen;
 import net.minecraft.text.Text;
 
 public enum BetaNetherPreset {
-    FAITHFUL("faithful", new BetaNetherProperties(128, 32, 1, true)),
-    AMPLIFIED("amplified", new BetaNetherProperties(256, 32, 1, true)),
-    CUSTOM("custom", new BetaNetherProperties(128, 32, 1, true));
+    FAITHFUL("faithful", new BetaNetherProperties(128, 32, 1, true, FeaturesProperty.BETA)),
+    AMPLIFIED("amplified", new BetaNetherProperties(256, 32, 1, true, FeaturesProperty.BETA)),
+    CUSTOM("custom", new BetaNetherProperties(128, 32, 1, true, FeaturesProperty.BETA));
 
 
     private final String name;
