@@ -16,7 +16,7 @@
   "createWorld.customize.beta.features.small_modern" : "Small Modern",
   "createWorld.customize.beta.cave_rarity" : "Cave Rarity",
   "createWorld.customize.beta.decliff" : "De-Cliff",
-  "createWorld.customize.beta.world_scale" : "World Scale",
+  "createWorld.customize.beta.biome_scale" : "Biome Scale",
   "createWorld.customize.beta.ore_range_scale" : "Ore Range Scale",
   "createWorld.customize.beta.extended" : "Extended World Height",
   "createWorld.customize.beta.ocean_level" : "Ocean Height",
