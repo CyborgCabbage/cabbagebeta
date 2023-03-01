@@ -10,9 +10,10 @@ import java.util.Random;
 
 public class WorldGenTallGrass extends WorldGenerator {
 	private final BlockState state;
-
-	public WorldGenTallGrass(BlockState i1) {
+	private final int height;
+	public WorldGenTallGrass(BlockState i1, int h) {
 		this.state = i1;
+		this.height = h;
 	}
 
 	public boolean generate(StructureWorldAccess world, Random random, int x, int y, int z) {
@@ -22,7 +23,7 @@ public class WorldGenTallGrass extends WorldGenerator {
 			--y;
 		}
 
-		for(int i = 0; i < 128; ++i) {
+		for(int i = 0; i < height; ++i) {
 			int rx = x + random.nextInt(8) - random.nextInt(8);
 			int ry = y + random.nextInt(4) - random.nextInt(4);
 			int rz = z + random.nextInt(8) - random.nextInt(8);

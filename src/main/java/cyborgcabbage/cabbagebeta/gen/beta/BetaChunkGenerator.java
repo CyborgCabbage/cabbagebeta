@@ -15,11 +15,11 @@ import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.CheckedRandom;
+import net.minecraft.util.math.random.ChunkRandom;
+import net.minecraft.util.math.random.RandomSeed;
 import net.minecraft.util.registry.*;
-import net.minecraft.world.ChunkRegion;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeSource;
@@ -109,7 +109,7 @@ public abstract class BetaChunkGenerator extends ChunkGenerator {
         }
     }
 
-    protected void generateMineable(WorldGeneratorContext context, BlockState block, int veinSize, int bound, int count){
+    protected void generateScaledMineable(WorldGeneratorContext context, BlockState block, int veinSize, int bound, int count){
         float density = count/(float)bound;
         int actualBound = Math.min(getHeight(), (int)(bound*getOreRangeScale()));
         int actualCount = (int)(density*actualBound);
@@ -238,5 +238,14 @@ public abstract class BetaChunkGenerator extends ChunkGenerator {
             index++;
         }
         return new VerticalBlockSample(getMinimumY(), blocks);
+    }
+
+    @Override
+    public void populateEntities(ChunkRegion region) {
+        ChunkPos chunkPos = region.getCenterPos();
+        RegistryEntry<Biome> registryEntry = region.getBiome(chunkPos.getStartPos().withY(region.getTopY() - 1));
+        ChunkRandom chunkRandom = new ChunkRandom(new CheckedRandom(RandomSeed.getSeed()));
+        chunkRandom.setPopulationSeed(region.getSeed(), chunkPos.getStartX(), chunkPos.getStartZ());
+        SpawnHelper.populateEntities(region, registryEntry, chunkPos, chunkRandom);
     }
 }

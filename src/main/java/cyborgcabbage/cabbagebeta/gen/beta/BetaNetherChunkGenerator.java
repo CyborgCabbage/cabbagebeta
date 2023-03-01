@@ -38,7 +38,6 @@ import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.*;
 import net.minecraft.world.gen.noise.NoiseConfig;
 
-import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -206,21 +205,18 @@ public class BetaNetherChunkGenerator extends BetaChunkGenerator {
     }
 
     @Override
-    public void populateEntities(ChunkRegion region) {
-
-    }
-
-    @Override
     public int getWorldHeight() {
         return 256;
     }
 
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        GenerationShapeConfig generationShapeConfig = getModernSettings().generationShapeConfig().trimHeight(chunk.getHeightLimitView());
+        ChunkGeneratorSettings settings = getModernSettings();
+
+        GenerationShapeConfig generationShapeConfig = settings.generationShapeConfig().trimHeight(chunk.getHeightLimitView());
         int i = generationShapeConfig.minimumY();
         int j = MathHelper.floorDiv(i, generationShapeConfig.verticalBlockSize());
-        int k = MathHelper.floorDiv(generationShapeConfig.height(), generationShapeConfig.verticalBlockSize());
+        int k = MathHelper.floorDiv(Math.max(generationShapeConfig.height(), prop.generationHeight()), generationShapeConfig.verticalBlockSize());
         if (k <= 0) {
             return CompletableFuture.completedFuture(chunk);
         } else {
@@ -496,11 +492,6 @@ public class BetaNetherChunkGenerator extends BetaChunkGenerator {
     @Override
     public int getMinimumY() {
         return 0;
-    }
-
-    @Override
-    public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
-        return getHeight() / 2;
     }
 
     public int getHeight(){

@@ -4,7 +4,6 @@ import com.google.common.collect.Sets;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.PrimitiveCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import cyborgcabbage.cabbagebeta.CabbageBeta;
 import cyborgcabbage.cabbagebeta.gen.BetaPreset;
 import cyborgcabbage.cabbagebeta.gen.BetaProperties;
 import cyborgcabbage.cabbagebeta.gen.FeaturesProperty;
@@ -30,7 +29,6 @@ import net.minecraft.util.registry.BuiltinRegistries;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.ChunkRegion;
-import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
@@ -44,8 +42,6 @@ import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.*;
 import net.minecraft.world.gen.noise.NoiseConfig;
 
-import java.util.Collections;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -158,13 +154,13 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
             }
             generateFeature(context, new WorldGenDungeons(), 8, true);
             generateFeature(context, new WorldGenClay(32), 10, false);
-            generateMineable(context, Blocks.DIRT.getDefaultState(), 32, getHeight(), (int) (20 * getHeightMultiplier()));
-            generateMineable(context, Blocks.GRAVEL.getDefaultState(), 32, getHeight(), (int) (10 * getHeightMultiplier()));
-            generateMineable(context, Blocks.COAL_ORE.getDefaultState(), 16, getHeight(), (int) (20 * getHeightMultiplier()));
-            generateMineable(context, Blocks.IRON_ORE.getDefaultState(), 8, 64, 20);
-            generateMineable(context, Blocks.GOLD_ORE.getDefaultState(), 8, 32, 2);
-            generateMineable(context, Blocks.REDSTONE_ORE.getDefaultState(), 7, 16, 8);
-            generateMineable(context, Blocks.DIAMOND_ORE.getDefaultState(), 7, 16, 1);
+            generateScaledMineable(context, Blocks.DIRT.getDefaultState(), 32, getHeight(), (int) (20 * getHeightMultiplier()));
+            generateScaledMineable(context, Blocks.GRAVEL.getDefaultState(), 32, getHeight(), (int) (10 * getHeightMultiplier()));
+            generateScaledMineable(context, Blocks.COAL_ORE.getDefaultState(), 16, getHeight(), (int) (20 * getHeightMultiplier()));
+            generateScaledMineable(context, Blocks.IRON_ORE.getDefaultState(), 8, 64, 20);
+            generateScaledMineable(context, Blocks.GOLD_ORE.getDefaultState(), 8, 32, 2);
+            generateScaledMineable(context, Blocks.REDSTONE_ORE.getDefaultState(), 7, 16, 8);
+            generateScaledMineable(context, Blocks.DIAMOND_ORE.getDefaultState(), 7, 16, 1);
             generateMineableBinomial(context, Blocks.LAPIS_ORE.getDefaultState(), 6, 16, 1);
 
             double d11 = 0.5D;
@@ -195,7 +191,7 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
                 int y = this.rand.nextInt(getHeight());
                 int z = chunkZ + this.rand.nextInt(16) + 8;
 
-                (new WorldGenTallGrass(shrubs == 1 ? Blocks.GRASS.getDefaultState() : Blocks.FERN.getDefaultState())).generate(world, this.rand, x, y, z);
+                (new WorldGenTallGrass(shrubs == 1 ? Blocks.GRASS.getDefaultState() : Blocks.FERN.getDefaultState(), getHeight())).generate(world, this.rand, x, y, z);
             }
 
             if (biome == BiomeGenBase.desert) {
@@ -327,15 +323,8 @@ public class BetaOverworldChunkGenerator extends BetaChunkGenerator {
         }
     }
 
-
-
     protected ChunkGeneratorSettings getModernSettings(){
         return BuiltinRegistries.CHUNK_GENERATOR_SETTINGS.getOrCreateEntry(ChunkGeneratorSettings.OVERWORLD).value();
-    }
-
-    @Override
-    public void populateEntities(ChunkRegion region) {
-
     }
 
     @Override

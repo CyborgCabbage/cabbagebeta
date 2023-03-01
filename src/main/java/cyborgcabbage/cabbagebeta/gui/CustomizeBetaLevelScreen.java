@@ -31,6 +31,7 @@ public class CustomizeBetaLevelScreen extends Screen {
 
     private CyclingButtonWidget<BetaPreset> overworldPresetButton;
     private CyclingButtonWidget<BetaNetherPreset> netherPresetButton;
+    private CyclingButtonWidget<EditingDimension> selectedDimensionButton;
 
     private OptionsListWidget overworldOptions;
     private OptionsListWidget netherOptions;
@@ -136,26 +137,23 @@ public class CustomizeBetaLevelScreen extends Screen {
                 customNetherProperties = BetaNetherPreset.CUSTOM.getProperties().clone();
             }
         }
+        //DIMENSION
+        this.addDrawableChild(CyclingButtonWidget.builder(EditingDimension::getTranslatableName)
+                .values(EditingDimension.values())
+                .initially(EditingDimension.OVERWORLD)
+                .build(this.width / 2 - 151, 25, 150, 20, Text.translatable("createWorld.customize.beta.dimension"), (button, dimension) -> {
+                    netherSelected = (dimension == EditingDimension.NETHER);
+                    initSelectedDimension();
+                }));
         //BETA PRESET
         this.overworldPresetButton = CyclingButtonWidget.builder(BetaPreset::getTranslatableName)
                 .values(BetaPreset.values())
                 .initially(currentOverworldPreset)
-                .build(this.width / 2 - 75, 25, 150, 20, Text.translatable("createWorld.customize.beta"), (button, betaPreset) -> presetInit(betaPreset));
+                .build(this.width / 2 + 1, 25, 150, 20, Text.translatable("createWorld.customize.beta"), (button, betaPreset) -> presetInit(betaPreset));
         this.netherPresetButton = CyclingButtonWidget.builder(BetaNetherPreset::getTranslatableName)
                 .values(BetaNetherPreset.values())
                 .initially(currentNetherPreset)
-                .build(this.width / 2 - 75, 25, 150, 20, Text.translatable("createWorld.customize.beta"), (button, betaPreset) -> netherPresetInit(betaPreset));
-        //DIRECTION BUTTONS
-        int gap = 5;
-        int width = 10;
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 75 - gap - width, 25, width, 20, Text.literal("<"), b -> {
-            netherSelected = !netherSelected;
-            initSelectedDimension();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 75 + gap, 25, width, 20, Text.literal(">"), b -> {
-            netherSelected = !netherSelected;
-            initSelectedDimension();
-        }));
+                .build(this.width / 2 + 1, 25, 150, 20, Text.translatable("createWorld.customize.beta"), (button, betaPreset) -> netherPresetInit(betaPreset));
         //SET VALUES
         presetInit(currentOverworldPreset);
         netherPresetInit(currentNetherPreset);

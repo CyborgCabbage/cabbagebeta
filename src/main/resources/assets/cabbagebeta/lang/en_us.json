@@ -23,9 +23,11 @@
   "createWorld.customize.beta.terrain_scale" : "Terrain Scale",
   "createWorld.customize.beta.ceiling" : "Ceiling",
 
+  "createWorld.customize.beta.dimension" : "Dimension",
+  "dimension.overworld" : "Overworld",
+  "dimension.nether" : "Nether",
 
   "createWorld.customize.beta" : "Preset",
-
   "options.beta_preset.faithful" : "Faithful",
   "options.beta_preset.improved" : "Improved",
   "options.beta_preset.amplified" : "Amplified",
